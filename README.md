@@ -18,3 +18,9 @@
 14. jika tidak ada, coba masuk ke src/ lalu jalankan **echo $ROS_PACKAGE_PATH**
 15. WES YA SEMOGA LANCAR DAN BERHASIL
 16. GA BERHASIL, TANYA
+
+
+Cara kilat instalasi ROS
+1. Download dulu file instalasi ROS yang .sh
+2. chmod a+x tahapan_setup_ros_full.sh
+3. sudo .\tahapan_setup_ros_full.sh
