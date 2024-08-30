@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
+
 #Dengan Menyebut Nama Allah Yang Maha Pengasih dan Yang Maha Penyayang
 
 from krti2023_pi.drone_api import DroneAPI
-from krti2023_pi.msg import DResult
+from krti2024_pi.msg import DResult
 from sensor_msgs.msg import LaserScan
-from krti2023_pi.srv import Activate, ActivateRequest, ActivateResponse
+from krti2024_pi.srv import Activate, ActivateRequest, ActivateResponse
 #from gazebo_link_attacher_ws.srv import Attach, AttachRequest, AttachResponse
-from gazebo_ros_link_attacher.srv import Attach, AttachRequest, AttachResponse
+#from gazebo_ros_link_attacher.srv import Attach, AttachRequest, AttachResponse
 #from gazebo_ros_link_detacher.srv import Detach, DetachRequest, DetachResponse
 import rospy
 from geographic_msgs.msg import GeoPoint
@@ -14,7 +16,7 @@ from math import *
 import math
 from pid import PID
 
-body2local = lambda x,y,heading: (x*cos(heading) - y*sin(heading), x*sin(heading) + y*cos(heading))
+body2local = lambda x,y,z,heading: (x*cos(heading) - y*sin(heading), x*sin(heading) + y*cos(heading), z, heading)
 
 def getFinalLatLong(lat1, long1, distance, angle) -> GeoPoint:
     # // calculate angles
@@ -51,15 +53,15 @@ class Game:
         rospy.init_node("main_node", log_level=rospy.DEBUG)
 
         self.activate_target = rospy.ServiceProxy("/vision/activate/target", Activate)
-        rospy.loginfo("Creating ServiceProxy to /link_attacher_node/attach")
-        self.attach_srv = rospy.ServiceProxy('/link_attacher_node/attach', Attach)
-        self.attach_srv.wait_for_service()
-        rospy.loginfo("Created ServiceProxy to /link_attacher_node/attach")
+        # rospy.loginfo("Creating ServiceProxy to /link_attacher_node/attach")
+        # self.attach_srv = rospy.ServiceProxy('/link_attacher_node/attach', Attach)
+        # self.attach_srv.wait_for_service()
+        # rospy.loginfo("Created ServiceProxy to /link_attacher_node/attach")
 
-        rospy.loginfo("Creating ServiceProxy to /link_attacher_node/detach")
-        self.detach_srv = rospy.ServiceProxy('/link_attacher_node/detach', Attach)
-        self.detach_srv.wait_for_service()
-        rospy.loginfo("Created ServiceProxy to /link_attacher_node/detach")
+        # rospy.loginfo("Creating ServiceProxy to /link_attacher_node/detach")
+        # self.detach_srv = rospy.ServiceProxy('/link_attacher_node/detach', Attach)
+        # self.detach_srv.wait_for_service()
+        # rospy.loginfo("Created ServiceProxy to /link_attacher_node/detach")
         self.sim = rospy.get_param("/vision/use_sim", False)
         self.target_sub = rospy.Subscriber(
             "/vision/target/result", DResult, self.target_callback
@@ -140,18 +142,18 @@ class Game:
                     # pass      
                     self.drone.move_vel(-velx, -vely, velz)
                     # self.drone.move(move_to)
-            if self.sim:
-                rospy.sleep(0.1)
-                # Link them
-                rospy.loginfo("Attaching drone and payload")
-                req = AttachRequest()
-                req.model_name_1 = "iris"
-                req.link_name_1 = "iris::drone::iris::base_link"
-                req.model_name_2 = "object kanan" #change to object kiri, when pick up left mode
-                req.link_name_2 = "object kanan::object::link"
+            # if self.sim:
+            #     rospy.sleep(0.1)
+            #     # Link them
+            #     rospy.loginfo("Attaching drone and payload")
+            #     req = AttachRequest()
+            #     req.model_name_1 = "iris"
+            #     req.link_name_1 = "iris::drone::iris::base_link"
+            #     req.model_name_2 = "object kanan" #change to object kiri, when pick up left mode
+            #     req.link_name_2 = "object kanan::object::link"
 
-                resp = self.attach_srv.call(req)
-                rospy.loginfo(f"attach : {resp.ok}")
+                # resp = self.attach_srv.call(req)
+                # rospy.loginfo(f"attach : {resp.ok}")
 
             return True
         
@@ -1352,7 +1354,7 @@ class Game:
         rospy.loginfo(f"Setting mode as AUTO")
         self.drone.set_mode("AUTO")
 
-    def coba(self):
+    def coba_gazebo(self):
         self.drone.wait4start()
 
         # 1. Set source to optical flow
@@ -1379,10 +1381,10 @@ class Game:
 
         # rospy.spin() # for looping this function
         ## 5. Payload search and pickup algorithm
-        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        # rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
 
         # # Call service
-        self.activate_target(ActivateRequest(True, 1))
+        # self.activate_target(ActivateRequest(True, 1))
 
         # # # # rospy.wait_for_service('/vision/activate/target')
         # # # # try:
@@ -1393,86 +1395,86 @@ class Game:
         # # # #     return
 
         # Do the pickup
-        result = self.pickup_algorithm()
-        while not result:
-            result = self.pickup_algorithm()
+        # result = self.pickup_algorithm()
+        # while not result:
+        #     result = self.pickup_algorithm()
 
-            if result == False:
-                for _ in range(30):
-                    self.drone.move_vel(0,0,0)
-                # Descend, do the brute force
-                self.z_pid.reset()
-                target_alt = 0.05
-                err = target_alt - self.drone.rangefinder
-                while self.drone.rangefinder < target_alt - 0.015 or self.drone.rangefinder > target_alt + 0.015:
-                    err = target_alt - self.drone.rangefinder
-                    velz = self.z_pid.update(err)
-                    self.drone.move_vel(0,0,velz)
+        #     if result == False:
+        #         for _ in range(30):
+        #             self.drone.move_vel(0,0,0)
+        #         # Descend, do the brute force
+        #         self.z_pid.reset()
+        #         target_alt = 0.05
+        #         err = target_alt - self.drone.rangefinder
+        #         while self.drone.rangefinder < target_alt - 0.015 or self.drone.rangefinder > target_alt + 0.015:
+        #             err = target_alt - self.drone.rangefinder
+        #             velz = self.z_pid.update(err)
+        #             self.drone.move_vel(0,0,velz)
 
-        rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
-        for _ in range(100):
-            self.drone.move_vel(0,0,0)
+        # rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        # for _ in range(100):
+        #     self.drone.move_vel(0,0,0)
 
-        rospy.loginfo("drone akan Naik")
-        for _ in range(30):
-            rospy.sleep(0.01)
-            self.drone.move_vel(0, 0, 0.2)
-        rospy.sleep(3)
+        # rospy.loginfo("drone akan Naik")
+        # for _ in range(30):
+        #     rospy.sleep(0.01)
+        #     self.drone.move_vel(0, 0, 0.2)
+        # rospy.sleep(3)
 
-        rospy.loginfo("drone akan MAJU")
-        for _ in range(100):
-            rospy.sleep(0.01)
-            self.drone.move_vel(-0.9, 0, 0)
-        rospy.sleep(3)
+        # rospy.loginfo("drone akan MAJU")
+        # for _ in range(100):
+        #     rospy.sleep(0.01)
+        #     self.drone.move_vel(-0.9, 0, 0)
+        # rospy.sleep(3)
 
-        rospy.loginfo("drone akan MENYAMPING")
-        for _ in range(100):
-            rospy.sleep(0.01)
-            self.drone.move_vel(0, 1.2, 0)
-        rospy.sleep(3)
+        # rospy.loginfo("drone akan MENYAMPING")
+        # for _ in range(100):
+        #     rospy.sleep(0.01)
+        #     self.drone.move_vel(0, 1.2, 0)
+        # rospy.sleep(3)
 
-        rospy.loginfo("-- SEARCHING FOR DROP BUCKET --")
+        # rospy.loginfo("-- SEARCHING FOR DROP BUCKET --")
 
-        # # self.activate_target(ActivateRequest(False, 1))
-        # # Activate service
-        self.activate_target(ActivateRequest(True, 2))
+        # # # self.activate_target(ActivateRequest(False, 1))
+        # # # Activate service
+        # self.activate_target(ActivateRequest(True, 2))
 
-        # Do the search
-        start = rospy.Time.now().to_sec() #.secs
-        result = self.test_color_following()
-        while not result:
-            result = self.test_color_following()
+        # # Do the search
+        # start = rospy.Time.now().to_sec() #.secs
+        # result = self.test_color_following()
+        # while not result:
+        #     result = self.test_color_following()
 
-        rospy.loginfo("drone akan TURUN")
-        for _ in range(30):
-            rospy.sleep(0.01)
-            self.drone.move_vel(0, 0, -0.07)
-        rospy.sleep(3)
+        # rospy.loginfo("drone akan TURUN")
+        # for _ in range(30):
+        #     rospy.sleep(0.01)
+        #     self.drone.move_vel(0, 0, -0.07)
+        # rospy.sleep(3)
         
-        rospy.loginfo("-- SEARCH STOPPED, DROPPING OBJECT --")
-        for _ in range(30):
-            rospy.sleep(0.01)
-            self.drone.move_vel(0, 0, 0)
-        rospy.sleep(10)
+        # rospy.loginfo("-- SEARCH STOPPED, DROPPING OBJECT --")
+        # for _ in range(30):
+        #     rospy.sleep(0.01)
+        #     self.drone.move_vel(0, 0, 0)
+        # rospy.sleep(10)
 
-        rospy.loginfo("drone akan NAIK")
-        for _ in range(100):
-            rospy.sleep(0.01)
-            # self.drone.stop()
-            self.drone.move_vel(0 , 0, 0.25)
-        rospy.sleep(3)
+        # rospy.loginfo("drone akan NAIK")
+        # for _ in range(100):
+        #     rospy.sleep(0.01)
+        #     # self.drone.stop()
+        #     self.drone.move_vel(0 , 0, 0.25)
+        # rospy.sleep(3)
 
-        rospy.loginfo("drone akan menuju EXIT GATE")
-        for _ in range(100):
-            rospy.sleep(0.01)
-            self.drone.move_vel(0, 1.5, 0)
-        rospy.sleep(3)
+        # rospy.loginfo("drone akan menuju EXIT GATE")
+        # for _ in range(100):
+        #     rospy.sleep(0.01)
+        #     self.drone.move_vel(0, 1.5, 0)
+        # rospy.sleep(3)
 
-        for _ in range(100):
-            rospy.sleep(0.01)
-            # self.drone.stop()
-            self.drone.move_vel(0 , 0, 0)
-        rospy.sleep(3)
+        # for _ in range(100):
+        #     rospy.sleep(0.01)
+        #     # self.drone.stop()
+        #     self.drone.move_vel(0 , 0, 0)
+        # rospy.sleep(3)
 
         # rospy.loginfo("drone akan KARPET KIRI BAWAH")
         # for _ in range(100):
@@ -1515,8 +1517,1035 @@ class Game:
 
 
         # 3. Land
-        # self.drone.set_mode("LAND")
+        self.drone.set_mode("LAND")
+    
+    def wilayah(self):
+        """
+            right: bool, default is False
+            Full mission, dengan menyebut nama Allah Yang Maha Pengasih dan Maha Penyayang:
+            --- indoor ---
+            0. Set stream rate
+            0. Set home heading of drone
+            0. Set servo in default position
+            1. Change source to optical flow
+            2. Takeoff to 1m
+            3. Forward 1m
+            4. Descend to ~25cm (-0.5m) (skipped)
+            5. Pickup algorithm
+            6. Ascent to ~1m (+0.75m)
+            7. Forward ~4m till LIDAR detect something
+            8. Left/right 5m
+            9. Detect drop bucket
+            10. Drop payload (relay as OFF)
+            11. Change source to GPS
+            12. Set mission as AUTO
 
+            --- outdoor ---
+            13. Following mission planner
+        """
+        
+        # 0. Set stream rate first for sending and receiving data from Raspy to Pixhawk and Vice Versa
+        self.drone.set_stream_rate(20)
+        self.drone.wait4start()
+        
+        # 0. Set home heading
+        home_heading = self.drone.get_home_heading() # tetep 0
+        head = home_heading # current heading
+        kiri = home_heading + 90
+        kanan = -90
+        zeros = 0 
+    
+        
+        # 0. Set servo to default position
+        # self.drone.set_servo(9, 1f100)
+        
+        # 1. Change to optical flow for indoor mission
+        rospy.loginfo("Change to Optical Flow")
+        rospy.loginfo(f"home hseading: {home_heading}\ncurrent heading: {head}")
+        self.drone.set_ekf_source(2)
+        # self.drone.set_origin()
+        self.drone.arm()
+        
+        # 2. Drone will take off 0.75 m
+        self.drone.takeoff(0.75)
+        
+        # check = self.drone.takeoff(0.75) #Ketika smpai ketinggian 0.5 m, drone menyatakan takeoff success
+        # counter = 0
+        # while not check and counter < 3:
+        #    rospy.logerr("Takeoff Failed")
+        #    rospy.loginfo("Trying Again")
+        #    check = self.drone.takeoff(0.75)
+        #    rospy.sleep(1)
+        #    counter += 1
+        # else:
+        #     rospy.loginfo("Takeoff Success")
+        #     rospy.sleep(2)
+        #     if counter == 3:
+        #         rospy.logerr("Unable Takeoff, program shuting down")
+        #         rospy.signal_shutdown() 
+        #         return
+        rospy.sleep(5)
+        # TASK: Set where is x(+), x(-), y(+), y(-), z(+), z(-)
+        '''
+        x(+) = maju (North)
+        y(+) = kanan (East)
+        z(+) = turun (Down)
+        '''
+        
+        # 3. Menyesuaikan Posisi Heading # SKIPED, reboot raspy every session
+        # x, y, z, home_heading = body2local(0, 0, 0, zeros)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": home_heading
+        #     }
+        # rospy.loginfo(f"Adjusting Drone Heading Position {dist}")
+        # for _ in range(10):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.loginfo(f"Finally, we're in {dist}")
+        # rospy.sleep(1)
+        
+        # 4. Using move_vel to forward 1,5 m
+        velz = 0
+        vely = 0 
+        velx = 0.4
+        
+        # Move command
+        rospy.loginfo(f"MAJU KE POSISI PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(30):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            rospy.sleep(0.1)
+        
+        # # 5. Activate Computer Vision
+        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        self.activate_target(ActivateRequest(True, 1))
+        
+        # # Do the pickup
+        result = self.pickup_algorithm()
+        while not result:
+            result = self.pickup_algorithm()
+
+            if result == False:
+                for _ in range(30):
+                    self.drone.move_vel(0,0,0)
+                    rospy.sleep(0.01)
+                # Descend, do the brute force
+                self.z_pid.reset()
+                target_alt = 0.015
+                err = target_alt - self.drone.rangefinder
+                while self.drone.rangefinder < target_alt - 0.001 or self.drone.rangefinder > target_alt + 0.001:
+                    err = target_alt - self.drone.rangefinder
+                    velz = self.z_pid.update(err)
+                    self.drone.move_vel(0, 0, velz)
+                for _ in range(10):
+                    self.drone.move_vel(0.3, 0, 0)
+                    rospy.sleep(0.01)
+    
+        
+        rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        
+        velz = 0.4
+        vely = 0 
+        velx = 0
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # # 6. Naik dikit setelah ambil barang
+        # x, y, z, head = body2local(0, 0, 0.1, home_heading)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": head
+        #     }
+        # rospy.loginfo(f"We're going to move to NAIK DIKIT {dist}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        # for _ in range(10):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.loginfo(f"Finally, we're in {dist}")
+        # rospy.sleep(2)
+
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(30):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # # # 7. Maju 5 meter 
+        velz = 0
+        vely = 0 
+        velx = 0.4
+        
+        # Move command
+        rospy.loginfo(f"MAJU KE PERSIMPANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(72):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        # x, y, z, head = body2local(3, 0, 0, head)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": head
+        #     }
+        # rospy.loginfo(f"We're going to move to MAJUUUUU {dist}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        # for _ in range(40):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.loginfo(f"Finally, we're in {dist}")
+        # rospy.sleep(1)
+        
+        # # # jika di set head, maka akan ngambil home_heading, yakni hadap drone awal saat take off.
+        # # # misal diterapkan nilai untuk YAW, maka harus di set nilai itu terus di setiap move.
+        
+        # 8. YAW ke kanan (-90 derajat)
+        x, y, z, head = body2local(0, 0, 0, kiri)
+        dist = {
+            "x": x, 
+            "y": y, 
+            "z": z, 
+            "heading": head
+            }
+        rospy.loginfo(f"We're going to move to YAWWWWWWW KIRI ({dist})")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(10):
+            self.drone.move(dist)
+            rospy.sleep(0.1)
+        rospy.sleep(3)
+        
+        # Maju ke luar ruangan
+        velz = 0
+        vely = 0 
+        velx = 0.4
+        
+        # Move command
+        rospy.loginfo(f"KELUAR RUANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(90):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        self.activate_target(ActivateRequest(True, 2))
+
+        # Do the search
+        rospy.loginfo("-- SEARCH DROP OBJECT BUCKET--")
+        start = rospy.Time.now().to_sec() #.secs
+        result = self.test_color_following()
+        while not result:
+            result = self.test_color_following()
+            self.drone.set_servo(5, 800)
+        
+            if rospy.Time.now().to_sec() - start > 5:
+                break
+            self.drone.set_servo(5, 800)
+            
+        # # STOP
+        # velz = 0
+        # vely = 0 
+        # velx = 0
+        
+        # # Move command
+        # rospy.loginfo(f"STOP\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        # rospy.sleep(2)
+        
+        # NAIK
+        # velz = 0.2
+        # vely = 0 
+        # velx = 0
+        
+        # # Move command
+        # rospy.loginfo(f"NAIK KETINGGIAN EXIT GATE: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        # velz = 0
+        # vely = 0 
+        # velx = 0.4
+        
+        # Move command
+        # rospy.loginfo(f"MELEWATI EXIT GATE: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(60):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        # rospy.sleep(3)       
+       
+        # # 9. maju 5 meter setelah yaw ke kanan
+        # x, y, z, heading = body2local(5, 0, 0, heading)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": heading
+        #     }
+        # rospy.loginfo(f"We're going to move to MAJUUUUU ({dist})")
+        # for _ in range(50):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.sleep(3)
+        
+
+        # velz = 0
+        # vely = 0 
+        # velx = 0
+        
+        # # 10. Stop command for dropping payload
+        """
+        SERVO
+        HIGH = NGUNCI = 1800
+        LOW = BUKAK = 800
+        """
+        # start_drop_time = rospy.Time.now().to_sec()
+        # if rospy.Time.now().to_sec() - start_drop_time < 5:  
+        #     self.drone.move_vel(velx, vely, velz)
+        # else :
+        #     self.drone.set_servo(9, 800)
+            
+        # rospy.loginfo("-- SEARCH STOPPED, DROPPING OBJECT --")
+
+        # # 11. Naik sekitar 1.8 meter
+        # x, y, z, heading = body2local(0, 0, 1, heading)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": heading
+        #     }
+        # rospy.loginfo(f"We're going to move to NAIKKKKK ({dist})")
+        # for _ in range(10):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.sleep(3)
+        
+        # # 12. Maju sekitar 6 meter
+        # x, y, z, heading = body2local(6, 0, 0, heading)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": heading
+        #     }
+        # rospy.loginfo(f"We're going to move to MAJUUUUU ({dist})")
+        # for _ in range(70):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.sleep(3)
+
+        # 4. Land
+        self.drone.set_mode("LAND")
+        
+    def check_servo(self):
+        rospy.loginfo("Nilai servo awal adalah 1900")
+        self.drone.set_servo(5, 800)
+        rospy.loginfo("Tunggu tiga detik")
+        rospy.sleep(3)
+        rospy.loginfo("Nilai servo akhir adalah 1100")
+        self.drone.set_servo(5, 1800)
+        
+    def movement(self):
+        """
+            right: bool, default is False
+            Full mission, dengan menyebut nama Allah Yang Maha Pengasih dan Maha Penyayang:
+            --- indoor ---
+            0. Set stream rate
+            0. Set home heading of drone
+            0. Set servo in default position
+            1. Change source to optical flow
+            2. Takeoff to 1m
+            3. Forward 1m
+            4. Descend to ~25cm (-0.5m) (skipped)
+            5. Pickup algorithm
+            6. Ascent to ~1m (+0.75m)
+            7. Forward ~4m till LIDAR detect something
+            8. Left/right 5m
+            9. Detect drop bucket
+            10. Drop payload (relay as OFF)
+            11. Change source to GPS
+            12. Set mission as AUTO
+
+            --- outdoor ---
+            13. Following mission planner
+        """
+        
+        # 0. Set stream rate first for sending and receiving data from Raspy to Pixhawk and Vice Versa
+        self.drone.set_stream_rate(20)
+        self.drone.wait4start()
+        
+        # 0. Set home heading
+        home_heading = self.drone.get_home_heading() # tetep 0
+        head = home_heading # current heading
+        kiri = home_heading + 90
+        kanan = -90
+        zeros = 0 
+    
+        
+        # 0. Set servo to default position
+        # self.drone.set_servo(9, 1f100)
+        
+        # 1. Change to optical flow for indoor mission
+        rospy.loginfo("Change to Optical Flow")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        self.drone.set_ekf_source(1)
+        # self.drone.set_origin()
+        self.drone.arm()
+        
+        # 2. Drone will take off 0.75 m
+        self.drone.takeoff(0.5)
+
+        rospy.sleep(5)
+        # TASK: Set where is x(+), x(-), y(+), y(-), z(+), z(-)
+        '''
+        x(+) = maju (North)
+        y(+) = kanan (East)
+        z(+) = turun (Down)
+        '''
+        
+        # 3. Menyesuaikan Posisi Heading # SKIPED, reboot raspy every session
+        velz = -0.105
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"NAIKD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(18):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            rospy.sleep(0.1)
+
+        velz = 0
+        vely = 0 
+        velx = 0.17
+        # test_offset = 0.0025
+        # Move command
+        rospy.loginfo(f"MAJU KE POSISI PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(78):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            # velx = velx + test_offset
+            rospy.sleep(0.1)
+            
+        # 4. Using move_vel to go down estimate payload height
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"STOP DI POSISI PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(20):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            rospy.sleep(0.1)
+        
+        # # 5. Activate Computer Vision
+        # rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        # self.activate_target(ActivateRequest(True, 1))
+        
+        # # # Do the pickup
+        # result = self.pickup_algorithm()
+        # while not result:
+        #     result = self.pickup_algorithm()
+
+        #     if result == False:
+        #         for _ in range(30):
+        #             self.drone.move_vel(0,0,0)
+        #             rospy.sleep(0.01)
+        #         # Descend, do the brute force
+        #         self.z_pid.reset()
+        #         target_alt = 0.010
+        #         err = target_alt - self.drone.rangefinder
+        #         while self.drone.rangefinder < target_alt - 0.001 or self.drone.rangefinder > target_alt + 0.001:
+        #             err = target_alt - self.drone.rangefinder
+        #             velz = self.z_pid.update(err)
+        #             self.drone.move_vel(0, 0, velz)
+        #             for _ in range(10):
+        #                 self.drone.move_vel(0.3, 0.1, 0)
+        #                 rospy.sleep(0.01)
+    
+        # rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        
+        # 6. Naik dikit setelah ambil barang
+        # velz = 0
+        # vely = 0 
+        # velx = 0.3
+        # rospy.loginfo(f"NAIK: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}") 
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+             
+        # for _ in range(20):
+        #     self.drone.move_vel(0, 0, 0)
+        #     rospy.sleep(0.1)
+
+        # 6. Naik dikit setelah ambil barang
+        velz = 0.2
+        vely = 0 
+        velx = 0
+        rospy.loginfo(f"NAIK: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}") 
+        for _ in range(20):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # 7. Stabilization setelah ambil barang
+        velz = 0
+        vely = 0 
+        velx = 0
+        # Move command
+        rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(200):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # 7. Maju 1.5 meter 
+        velz = 0
+        vely = 0 
+        velx = 0.15
+        # Move command
+        rospy.loginfo(f"MAJU KE PERSIMPANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(202):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        # Move command
+        rospy.loginfo(f"STOP SEBELUM YAW KIRI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # # # jika di set head, maka akan ngambil home_heading, yakni hadap drone awal saat take off.
+        # # # misal diterapkan nilai untuk YAW, maka harus di set nilai itu terus di setiap move.
+        
+        # 8. YAW ke kanan (-90 derajat)
+        # x, y, z, head = body2local(0, 0, 0, kiri)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": head
+        #     }
+        # rospy.loginfo(f"We're going to move to YAWWWWWWW KIRI ({dist})")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        # for _ in range(10):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.sleep(3)
+        
+        rospy.loginfo(f"SERVO MELEPAS")
+        for _ in range(10):
+            self.drone.set_servo(5, 800)
+            rospy.sleep(0.1)
+        
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0.3
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(100):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # self.activate_target(ActivateRequest(True, 2))
+
+        # Do the search
+        # rospy.loginfo("-- SEARCH DROP OBJECT BUCKET--")
+        # start = rospy.Time.now().to_sec() #.secs
+        # result = self.test_color_following()
+        # while not result:
+        #     result = self.test_color_following()
+        #     self.drone.set_servo(5, 800)
+        
+        #     if rospy.Time.now().to_sec() - start > 5:
+        #         break
+        # self.drone.set_servo(5, 800)
+            
+        # rospy.loginfo(f"SERVO MELEPAS")
+        # for _ in range(10):
+        #     self.drone.set_servo(5, 800)
+        #     rospy.sleep(0.1)
+        
+        # 9. Maju 1.5 meter 
+        # velz = 0
+        # vely = 0 
+        # velx = 0
+        
+        # # Move command
+        # rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(20):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        velz = 0.2
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(25):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0.3 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(150):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(20):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+            
+        """
+        SERVO
+        HIGH = NGUNCI = 1800
+        LOW = BUKAK = 800
+        """
+        
+        # 7. Stabilization setelah ambil barang
+        # velz = 0
+        # vely = 0 
+        # velx = 0
+        # # Move command
+        # rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(10):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+        
+        # NAIK
+        # velz = 0.3
+        # vely = 0 
+        # velx = 0UANGAN DENGAN KECEPATAN
+        
+        # # Move command
+        # rospy.loginfo(f"NAIK KETINGGIAN EXIT GATE: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        # velz = 0
+        # vely = 0 
+        # velx = 0.4
+        
+        # # Move command
+        # rospy.loginfo(f"MELEWATI EXIT GATE: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+
+        # 4. Land
+        self.drone.set_mode("LAND")
+            
+    def last_test(self):
+        """
+            right: bool, default is False
+            Full mission, dengan menyebut nama Allah Yang Maha Pengasih dan Maha Penyayang:
+            --- indoor ---
+            0. Set stream rate
+            0. Set home heading of drone
+            0. Set servo in default position
+            1. Change source to optical flow
+            2. Takeoff to 1m
+            3. Forward 1m
+            4. Descend to ~25cm (-0.5m) (skipped)
+            5. Pickup algorithm
+            6. Ascent to ~1m (+0.75m)
+            7. Forward ~4m till LIDAR detect something
+            8. Left/right 5m
+            9. Detect drop bucket
+            10. Drop payload (relay as OFF)
+            11. Change source to GPS
+            12. Set mission as AUTO
+
+            --- outdoor ---
+            13. Following mission planner
+        """
+        
+        # 0. Set stream rate first for sending and receiving data from Raspy to Pixhawk and Vice Versa
+        self.drone.set_stream_rate(20)
+        self.drone.wait4start()
+        
+        # 0. Set home heading
+        home_heading = self.drone.get_home_heading() # tetep 0
+        head = home_heading # current heading
+        kiri = home_heading + 90
+        kanan = -90
+        zeros = 0 
+    
+        
+        # 0. Set servo to default position
+        # self.drone.set_servo(9, 1f100)
+        
+        # 1. Change to optical flow for indoor mission
+        rospy.loginfo("Change to Optical Flow")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        self.drone.set_ekf_source(1)
+        # self.drone.set_origin()
+        self.drone.arm()
+        
+        # 2. Drone will take off 0.75 m
+        self.drone.takeoff(0.5)
+
+        rospy.sleep(5)
+        # TASK: Set where is x(+), x(-), y(+), y(-), z(+), z(-)
+        '''
+        x(+) = maju (North)
+        y(+) = kanan (East)
+        z(+) = turun (Down)
+        '''
+        
+        # 3. Menyesuaikan Posisi Heading # SKIPED, reboot raspy every session
+
+        velz = -0.085
+        vely = 0 
+        velx = 0.4
+        test_offset = 0.0025
+        # Move command
+        rospy.loginfo(f"MAJU KE POSISI PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(18):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            velx = velx + test_offset
+            rospy.sleep(0.1)
+    
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"STOP DI POSISI PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(1000):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            rospy.sleep(0.1)
+        
+        # # 5. Activate Computer Vision
+        # rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        # self.activate_target(ActivateRequest(True, 1))
+        
+        # # # Do the pickup
+        # result = self.pickup_algorithm()
+        # while not result:
+        #     result = self.pickup_algorithm()
+
+        #     if result == False:
+        #         for _ in range(30):
+        #             self.drone.move_vel(0,0,0)
+        #             rospy.sleep(0.01)
+        #         # Descend, do the brute force
+        #         self.z_pid.reset()
+        #         target_alt = 0.010
+        #         err = target_alt - self.drone.rangefinder
+        #         while self.drone.rangefinder < target_alt - 0.001 or self.drone.rangefinder > target_alt + 0.001:
+        #             err = target_alt - self.drone.rangefinder
+        #             velz = self.z_pid.update(err)
+        #             self.drone.move_vel(0, 0, velz)
+        #             for _ in range(10):
+        #                 self.drone.move_vel(0.3, 0.1, 0)
+        #                 rospy.sleep(0.01)
+    
+        # rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        
+        # 6. Naik dikit setelah ambil barang
+        # velz = 0
+        # vely = 0 
+        # velx = 0.3
+        # rospy.loginfo(f"NAIK: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}") 
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+             
+        # for _ in range(20):
+        #     self.drone.move_vel(0, 0, 0)
+        #     rospy.sleep(0.1)
+
+        # 6. Naik dikit setelah ambil barang
+        velz = 0.2
+        vely = 0 
+        velx = 0
+        rospy.loginfo(f"NAIK: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}") 
+        for _ in range(20):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # 7. Stabilization setelah ambil barang
+        velz = 0
+        vely = 0 
+        velx = 0
+        # Move command
+        rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(60):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # 7. Maju 1.5 meter 
+        velz = 0
+        vely = 0 
+        velx = 0.15
+        # Move command
+        rospy.loginfo(f"MAJU KE PERSIMPANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(202):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        # Move command
+        rospy.loginfo(f"STOP SEBELUM YAW KIRI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # # # jika di set head, maka akan ngambil home_heading, yakni hadap drone awal saat take off.
+        # # # misal diterapkan nilai untuk YAW, maka harus di set nilai itu terus di setiap move.
+        
+        # 8. YAW ke kanan (-90 derajat)
+        # x, y, z, head = body2local(0, 0, 0, kiri)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": head
+        #     }
+        # rospy.loginfo(f"We're going to move to YAWWWWWWW KIRI ({dist})")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        # for _ in range(10):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.sleep(3)
+        
+        rospy.loginfo(f"SERVO MELEPAS")
+        for _ in range(10):
+            self.drone.set_servo(5, 800)
+            rospy.sleep(0.1)
+        
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0.3
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(100):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(10):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+        
+        # self.activate_target(ActivateRequest(True, 2))
+
+        # Do the search
+        # rospy.loginfo("-- SEARCH DROP OBJECT BUCKET--")
+        # start = rospy.Time.now().to_sec() #.secs
+        # result = self.test_color_following()
+        # while not result:
+        #     result = self.test_color_following()
+        #     self.drone.set_servo(5, 800)
+        
+        #     if rospy.Time.now().to_sec() - start > 5:
+        #         break
+        # self.drone.set_servo(5, 800)
+            
+        # rospy.loginfo(f"SERVO MELEPAS")
+        # for _ in range(10):
+        #     self.drone.set_servo(5, 800)
+        #     rospy.sleep(0.1)
+        
+        # 9. Maju 1.5 meter 
+        # velz = 0
+        # vely = 0 
+        # velx = 0
+        
+        # # Move command
+        # rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(20):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        velz = 0.2
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(25):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0.3 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(150):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+        velz = 0
+        vely = 0 
+        velx = 0
+        
+        # Move command
+        rospy.loginfo(f"KELUAR SETELAH CEMPLUNG PAYLOAD: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        for _ in range(20):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
+            
+            
+        """
+        SERVO
+        HIGH = NGUNCI = 1800
+        LOW = BUKAK = 800
+        """
+        
+        # 7. Stabilization setelah ambil barang
+        # velz = 0
+        # vely = 0 
+        # velx = 0
+        # # Move command
+        # rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(10):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+        
+        # NAIK
+        # velz = 0.3
+        # vely = 0 
+        # velx = 0UANGAN DENGAN KECEPATAN
+        
+        # # Move command
+        # rospy.loginfo(f"NAIK KETINGGIAN EXIT GATE: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+            
+        # velz = 0
+        # vely = 0 
+        # velx = 0.4
+        
+        # # Move command
+        # rospy.loginfo(f"MELEWATI EXIT GATE: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+
+        # 4. Land
+        self.drone.set_mode("LAND")
+    
     def full3(self, right = False):
         """
             right: bool, default is False
@@ -1539,7 +2568,7 @@ class Game:
             --- outdoor ---
             13. Following mission planner
         """
-
+        self.drone.set_stream_rate()
         self.drone.wait4start()
 
         # Destination
@@ -1550,12 +2579,13 @@ class Game:
         self.drone.switch_relay(0, False)
 
         # 1. Set source to optical flow
-        # rospy.loginfo(f"Changing source to optical flow") #ketika self.drone.set_ekf_source(2)
-        rospy.loginfo(f"Changing source to GPS")
-        self.drone.set_ekf_source(3)
+        rospy.loginfo(f"Changing source to optical flow") #ketika self.drone.set_ekf_source(2)
+        # rospy.loginfo(f"Changing source to GPS")
+        self.drone.set_ekf_source(2)
+        
 
         # 2. Takeoff
-        check = self.drone.takeoff(1)
+        check = self.drone.takeoff(0.6)
         if not check:
             rospy.logerr("takeoff failed")
             rospy.loginfo("trying again")
@@ -1565,7 +2595,7 @@ class Game:
 
         velz = 0
         vely = 0 
-        velx = 0.3
+        velx = 0.2
         
         # Move command        
         for _ in range(30):
@@ -1580,60 +2610,60 @@ class Game:
         #     rospy.loginfo_throttle(0.2,"[WP 1] waiting for wp reached")
 
         # Call service
-        self.activate_target(ActivateRequest(True, 1))
+        # self.activate_target(ActivateRequest(True, 1))
 
         # self.drone.stop()
-        rospy.sleep(2)
+        # rospy.sleep(2)
 
         ## 4. Skipped, descend will be done by the pickup_algorithm()
         ## 5. Payload search and pickup algorithm
-        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        # rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
 
         # Do the pickup
-        result = self.pickup_algorithm()
-        while not result:
-            result = self.pickup_algorithm()
-            if result == False:
-                for _ in range(30):
-                    self.drone.move_vel(0,0,0)
-                # Descend, do the brute force
-                self.z_pid.reset()
-                target_alt = 0.33
-                err = target_alt - self.drone.rangefinder
-                while self.drone.rangefinder < target_alt - 0.015 or self.drone.rangefinder > target_alt + 0.015:
-                    err = target_alt - self.drone.rangefinder
-                    velz = self.z_pid.update(err)
-                    self.drone.move_vel(0,0,velz)
-                break
+        # result = self.pickup_algorithm()
+        # while not result:
+        #     result = self.pickup_algorithm()
+        #     if result == False:
+        #         for _ in range(30):
+        #             self.drone.move_vel(0,0,0)
+        #         # Descend, do the brute force
+        #         self.z_pid.reset()
+        #         target_alt = 0.33
+        #         err = target_alt - self.drone.rangefinder
+        #         while self.drone.rangefinder < target_alt - 0.015 or self.drone.rangefinder > target_alt + 0.015:
+        #             err = target_alt - self.drone.rangefinder
+        #             velz = self.z_pid.update(err)
+        #             self.drone.move_vel(0,0,velz)
+        #         break
 
-        rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
-        for _ in range(30):
-            self.drone.move_vel(0,0,0)
+        # rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        # for _ in range(30):
+        #     self.drone.move_vel(0,0,0)
 
-        # Call service
-        self.activate_target(ActivateRequest(False, 1))
+        # # Call service
+        # self.activate_target(ActivateRequest(False, 1))
 
-        ## 6. Ascent to ~1m (0.75m up)
-        target_alt = 1
-        err = target_alt - self.drone.rangefinder
-        self.z_pid.reset()
-        while self.drone.rangefinder < target_alt - 0.05 or self.drone.rangefinder > target_alt + 0.05:
-            err = target_alt - self.drone.rangefinder
-            velz = self.z_pid.update(err)
-            self.drone.move_vel(0, 0, velz)
+        # ## 6. Ascent to ~1m (0.75m up)
+        # target_alt = 1
+        # err = target_alt - self.drone.rangefinder
+        # self.z_pid.reset()
+        # while self.drone.rangefinder < target_alt - 0.05 or self.drone.rangefinder > target_alt + 0.05:
+        #     err = target_alt - self.drone.rangefinder
+        #     velz = self.z_pid.update(err)
+        #     self.drone.move_vel(0, 0, velz)
 
-        rospy.sleep(8)
-        self.drone.switch_relay(0, True)
+        # rospy.sleep(8)
+        # self.drone.switch_relay(0, True)
 
-        velz = 0
-        vely = 0 
-        velx = 0.3
-        # Move command        
-        for _ in range(30):
-            self.drone.move_vel(velx, vely, velz)
-            rospy.sleep(0.1)
+        # velz = 0
+        # vely = 0 
+        # velx = 0.3
+        # # Move command        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
 
-        rospy.sleep(3)
+        # rospy.sleep(3)
         
         for _ in range(30):
             self.drone.move_vel(0,0,0)
@@ -1879,7 +2909,15 @@ if __name__ == "__main__":
     game = Game()
     try:
 
-        game.coba()
+        # UNTUK COMVIS
+        game.movement()
+        # UNTUK TANPA COMVIS
+        # game.wilayah()
+        
+        # game.last_test()
+        
+        # game.check_servo()
+        # game.coba_gazebo()
         # game.self_takeoff()
         # game.test_vision()
 
