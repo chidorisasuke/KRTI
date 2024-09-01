@@ -6,6 +6,8 @@ from krti2023_pi.drone_api import DroneAPI
 from krti2024_pi.msg import DResult
 from sensor_msgs.msg import LaserScan
 from krti2024_pi.srv import Activate, ActivateRequest, ActivateResponse
+# from obstacle_avoidance import ObstacleAvoidanceNode
+from obstacleavoidance_maintain import ObstacleAvoidanceNode
 #from gazebo_link_attacher_ws.srv import Attach, AttachRequest, AttachResponse
 #from gazebo_ros_link_attacher.srv import Attach, AttachRequest, AttachResponse
 #from gazebo_ros_link_detacher.srv import Detach, DetachRequest, DetachResponse
@@ -73,15 +75,19 @@ class Game:
         waypoints = []
 
         self.drone = DroneAPI(waypoints=waypoints, sim=True)
-        self.x_pid = PID(0.4, 0.01, 0.1, 0, 1, 0.3, "x")
-        self.y_pid = PID(0.4, 0.01, 0.1, 0, 1, 0.3, "y")
-        self.z_pid = PID(0.3, 0.01, 0.2, 0, 1, 0.2, "z", 0.2)
+        self.x_pid = PID(0.3, 0.01, 0.1, 0, 0.8, 0.5, "x")
+        self.y_pid = PID(0.3, 0.01, 0.1, 0, 0.8, 0.5, "y")
+        self.z_pid = PID(0.2, 0.01, 0.2, 0, 0.5, 0.2, "z", 0.2)
+        
+        # self.obstacle_avoidance_node = ObstacleAvoidanceNode()
+        # self.obstacle_avoidance_node_maintain = ObstacleAvoidanceNode()
 
-        self.avoidance_vector_x = 0
-        self.avoidance_vector_y = 0
-        self.last_avoidance_timestamp = 0
-        self.avoid = False
-        self.collision_sub = rospy.Subscriber('/sensors/lidar/sim', LaserScan, self.lidar_avoidance_cb)
+        # For Obstacle Avoidance in Simulation
+        # self.avoidance_vector_x = 0
+        # self.avoidance_vector_y = 0
+        # self.last_avoidance_timestamp = 0
+        # self.avoid = False
+        # self.collision_sub = rospy.Subscriber('/sensors/lidar/sim', LaserScan, self.lidar_avoidance_cb)
 
 
     def target_callback(self, msg):
@@ -89,6 +95,7 @@ class Game:
         rospy.logdebug_throttle(0.2,"target data: {}".format(self.target_data))
 
     def pickup_algorithm(self):
+        rospy.loginfo_throttle(1,"Masuk Fungsi Pickup Algorithm")
         start = rospy.Time.now().to_sec()
         x_done = False
         y_done = False
@@ -117,14 +124,14 @@ class Game:
                 }
                 dx = self.target_data.dx
                 dy = self.target_data.dy
-                if not(dx > 80  or dx < -80):
+                if not(dx > 40  or dx < -40):
                     x_done = True
                 if not(dy > 40  or dy < -40):
                     y_done = True
 
                 alt = cur_pose["z"]
 
-                if x_done and y_done and cur_pose["z"] < 0.33  and self.target_data.is_found:
+                if x_done and y_done and cur_pose["z"] < 0.22  and self.target_data.is_found:
                     rospy.loginfo("target altitude reached")
                     break
 
@@ -134,13 +141,16 @@ class Game:
                 rospy.logdebug(f"current position : {cur_pose}")
                 velx = self.x_pid.update(-self.target_data.dy/360)
                 vely = self.y_pid.update(-self.target_data.dx/360) 
-                target_alt = 0.32
+                target_alt = 0.22
+                rospy.loginfo_throttle(0.5, "-------- Target_alt = 0.22 FUNGSI TRUE -------")
                 err = target_alt - alt
                 velz = self.z_pid.update(err)
                 rospy.loginfo(f"velx : {velx}, vely : {vely} velz : {velz}")
                 if self.drone.stable_motion():
                     # pass      
-                    self.drone.move_vel(-velx, -vely, velz)
+                    # self.drone.move_vel(-velx, -vely, velz)
+                    move_detect = self.drone.move_vel(0, 0, velz)
+                    rospy.loginfo(f"Move to target: {move_detect}")
                     # self.drone.move(move_to)
             # if self.sim:
             #     rospy.sleep(0.1)
@@ -160,146 +170,72 @@ class Game:
         except:
             return False
         
-    def release_algorithm(self):
-        start = rospy.Time.now().to_sec()
-        x_done = False
-        y_done = False
+    # def lidar_avoidance_cb(self, msg):
+    #     self.current_2D_scan = msg
+    #     self.avoidance_vector_x = 0
+    #     self.avoidance_vector_y = 0
+    #     self.avoid = False
+    #     temp = []
+    #     ranges_temp = []
+    #     index = []
 
-        while not self.target_data.is_found :
-            rospy.loginfo_throttle(0.2,"waiting for target")
+    #     for i in range(1, len(self.current_2D_scan.ranges)):
+    #         d0 = 0.4
+    #         k = 0.5
 
-            # If it took longer than 10 seconds, we'll do
-            # the drop no matter what, believing in God that
-            # He will move the object as we want to
-            if rospy.Time.now().to_sec() - start > 10:
-                return False
-        try:
-            while self.target_data.is_found :
-            
-                # self.move() maju beberapa cm ke depan untuk mencocokan posisi magnet dengan target
-                cur_pose = {
-                    "x": self.drone.current_pose.pose.pose.position.x,
-                    "y": self.drone.current_pose.pose.pose.position.y,
-                    "z": self.drone.rangefinder,
-                }
-                move_to = {
-                    "x": 0,
-                    "y": 0,
-                    "z": 0,
-                }
-                dx = self.target_data.dx
-                dy = self.target_data.dy
-                if not(dx > 80  or dx < -80):
-                    x_done = True
-                if not(dy > 40  or dy < -40):
-                    y_done = True
+    #         if i % 2 != 1:
+    #             continue
 
-                alt = cur_pose["z"]
+    #         rospy.loginfo_throttle(1, f"range {i}: {self.current_2D_scan.ranges[i]}") 
 
-                if x_done and y_done and cur_pose["z"] < 0.33  and self.target_data.is_found:
-                    rospy.loginfo("target altitude reached")
-                    break
+    #         if self.current_2D_scan.ranges[i] < d0 and self.current_2D_scan.ranges[i] > 0.35:
+    #             self.avoid = True
+    #             x = math.cos(self.current_2D_scan.angle_increment * i)
+    #             y = math.sin(self.current_2D_scan.angle_increment * i)
+    #             U = -0.5 * k * ((1 / self.current_2D_scan.ranges[i]) - (1 / d0))**2
+    #             index.append(math.degrees(i * self.current_2D_scan.angle_increment))
+    #             temp.append(U)
+    #             ranges_temp.append(self.current_2D_scan.ranges[i])
 
-                rospy.logdebug(f"current position : {cur_pose}")
-                rospy.logdebug(f"move to : {move_to}")
-                
-                rospy.logdebug(f"current position : {cur_pose}")
-                velx = self.x_pid.update(-self.target_data.dy/360)
-                vely = self.y_pid.update(-self.target_data.dx/360) 
-                target_alt = 0.32
-                err = target_alt - alt
-                velz = self.z_pid.update(err)
-                rospy.loginfo(f"velx : {velx}, vely : {vely} velz : {velz}")
-                if self.drone.stable_motion():
-                    # pass      
-                    self.drone.move_vel(-velx, -vely, velz)
-                    # self.drone.move(move_to)
-            if self.sim:
-                rospy.sleep(0.1)
-                # Drop Payload
-                if self.enable_detach:
-                    rospy.loginfo("detaching drone and payload")
-                    req = AttachRequest()
-                    req.model_name_1 = "iris"
-                    req.link_name_1 = "iris::drone::iris::base_link"
-                    req.model_name_2 = "object kiri"
-                    req.link_name_2 = "link"
+    #             self.avoidance_vector_x += x * -U
+    #             self.avoidance_vector_y += y * -U
 
-                    resp = self.detach_srv.call(req)
-                    rospy.loginfo(f"detach : {resp.ok}")
+    #     rospy.loginfo_throttle(1, f"Angle: {index}") 
+    #     rospy.loginfo_throttle(1, f"range: {ranges_temp}")        
+    #     rospy.logdebug_throttle(1, f"Nilai U: {temp}")
+    #     rospy.logdebug_throttle(1, f"{self.avoidance_vector_x}, {self.avoidance_vector_y}")
 
-            return True
-        
-        except:
-            return False
-        
-    def lidar_avoidance_cb(self, msg):
-        self.current_2D_scan = msg
-        self.avoidance_vector_x = 0
-        self.avoidance_vector_y = 0
-        self.avoid = False
-        temp = []
-        ranges_temp = []
-        index = []
+    #     # body2local
+    #     # home_heading = self.drone.get_home_heading()
+    #     # deg2rad = (math.pi/180)
+    #     # avoidance_vector_x = self.avoidance_vector_x * math.cos(home_heading * deg2rad) - self.avoidance_vector_y * math.sin(home_heading * deg2rad)
+    #     # avoidance_vector_y = self.avoidance_vector_x * math.cos(home_heading * deg2rad) + self.avoidance_vector_y * math.sin(home_heading * deg2rad)
 
-        for i in range(1, len(self.current_2D_scan.ranges)):
-            d0 = 0.4
-            k = 0.5
+    #     if self.avoid:
+    #         magnitude = math.sqrt(self.avoidance_vector_x**2 + self.avoidance_vector_y**2)
+    #         if magnitude > 3:
+    #             self.avoidance_vector_x = 3 * (self.avoidance_vector_x / magnitude)
+    #             self.avoidance_vector_y = 3 * (self.avoidance_vector_y / magnitude)
 
-            if i % 2 != 1:
-                continue
+    #         if self.avoidance_vector_y > 0.15:
+    #             self.avoidance_vector_y = 0
+    #         #     if self.avoidance_vector_y < 0.15:
+    #         #         self.avoidance_vector_y = 0 
 
-            rospy.loginfo_throttle(1, f"range {i}: {self.current_2D_scan.ranges[i]}") 
+    #         # if rospy.Time().now().secs - self.last_avoidance_timestamp > 0.1:
+    #         self.lidar_avoidance()
 
-            if self.current_2D_scan.ranges[i] < d0 and self.current_2D_scan.ranges[i] > 0.35:
-                self.avoid = True
-                x = math.cos(self.current_2D_scan.angle_increment * i)
-                y = math.sin(self.current_2D_scan.angle_increment * i)
-                U = -0.5 * k * ((1 / self.current_2D_scan.ranges[i]) - (1 / d0))**2
-                index.append(math.degrees(i * self.current_2D_scan.angle_increment))
-                temp.append(U)
-                ranges_temp.append(self.current_2D_scan.ranges[i])
-
-                self.avoidance_vector_x += x * -U
-                self.avoidance_vector_y += y * -U
-
-        rospy.loginfo_throttle(1, f"Angle: {index}") 
-        rospy.loginfo_throttle(1, f"range: {ranges_temp}")        
-        rospy.logdebug_throttle(1, f"Nilai U: {temp}")
-        rospy.logdebug_throttle(1, f"{self.avoidance_vector_x}, {self.avoidance_vector_y}")
-
-        # body2local
-        # home_heading = self.drone.get_home_heading()
-        # deg2rad = (math.pi/180)
-        # avoidance_vector_x = self.avoidance_vector_x * math.cos(home_heading * deg2rad) - self.avoidance_vector_y * math.sin(home_heading * deg2rad)
-        # avoidance_vector_y = self.avoidance_vector_x * math.cos(home_heading * deg2rad) + self.avoidance_vector_y * math.sin(home_heading * deg2rad)
-
-        if self.avoid:
-            magnitude = math.sqrt(self.avoidance_vector_x**2 + self.avoidance_vector_y**2)
-            if magnitude > 3:
-                self.avoidance_vector_x = 3 * (self.avoidance_vector_x / magnitude)
-                self.avoidance_vector_y = 3 * (self.avoidance_vector_y / magnitude)
-
-            if self.avoidance_vector_y > 0.15:
-                self.avoidance_vector_y = 0
-            #     if self.avoidance_vector_y < 0.15:
-            #         self.avoidance_vector_y = 0 
-
-            # if rospy.Time().now().secs - self.last_avoidance_timestamp > 0.1:
-            self.lidar_avoidance()
-
-    def lidar_avoidance(self):
-        # rospy.logdebug(f"avoid {self.avoid}")
-        if self.avoid:
-            home_heading = self.drone.get_home_heading()
-            head = radians(home_heading)
-            x,y = body2local(-self.avoidance_vector_y, -self.avoidance_vector_x, head)
-            if x > 0.15:
-                x = 0
-            dist = {"x":  x, "y":  y, "z": 0.6, "heading": home_heading}
-            self.drone.move(dist)
-            rospy.logdebug(f"Efek Lidar: {dist}")
-
+    # def lidar_avoidance(self):
+    #     # rospy.logdebug(f"avoid {self.avoid}")
+    #     if self.avoid:
+    #         home_heading = self.drone.get_home_heading()
+    #         head = radians(home_heading)
+    #         x,y = body2local(-self.avoidance_vector_y, -self.avoidance_vector_x, head)
+    #         if x > 0.15:
+    #             x = 0
+    #         dist = {"x":  x, "y":  y, "z": 0.6, "heading": home_heading}
+    #         self.drone.move(dist)
+    #         rospy.logdebug(f"Efek Lidar: {dist}")
 
     def pickup_algorithm2(self):
         now = rospy.Time.now()
@@ -1557,17 +1493,17 @@ class Game:
     
         
         # 0. Set servo to default position
-        # self.drone.set_servo(9, 1f100)
+        # self.drone.set_servo(9, 1800)
         
         # 1. Change to optical flow for indoor mission
-        rospy.loginfo("Change to Optical Flow")
+        rospy.loginfo("Change to RTK")
         rospy.loginfo(f"home hseading: {home_heading}\ncurrent heading: {head}")
-        self.drone.set_ekf_source(2)
+        self.drone.set_ekf_source(1)
         # self.drone.set_origin()
-        self.drone.arm()
+        # self.drone.arm()
         
         # 2. Drone will take off 0.75 m
-        self.drone.takeoff(0.75)
+        self.drone.takeoff(0.5)
         
         # check = self.drone.takeoff(0.75) #Ketika smpai ketinggian 0.5 m, drone menyatakan takeoff success
         # counter = 0
@@ -1584,7 +1520,7 @@ class Game:
         #         rospy.logerr("Unable Takeoff, program shuting down")
         #         rospy.signal_shutdown() 
         #         return
-        rospy.sleep(5)
+        rospy.sleep(2)
         # TASK: Set where is x(+), x(-), y(+), y(-), z(+), z(-)
         '''
         x(+) = maju (North)
@@ -1607,10 +1543,14 @@ class Game:
         # rospy.loginfo(f"Finally, we're in {dist}")
         # rospy.sleep(1)
         
-        # 4. Using move_vel to forward 1,5 m
+        # 5. Activate Computer Vision
+        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        self.activate_target(ActivateRequest(True, 1))
+        
+        # # 4. Using move_vel to forward 1,5 m
         velz = 0
         vely = 0 
-        velx = 0.4
+        velx = 0.3
         
         # Move command
         rospy.loginfo(f"MAJU KE POSISI PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
@@ -1620,40 +1560,94 @@ class Game:
             print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
             print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
             rospy.sleep(0.1)
-        
-        # # 5. Activate Computer Vision
-        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
-        self.activate_target(ActivateRequest(True, 1))
+            
+        rospy.sleep(3)
         
         # # Do the pickup
+        rospy.loginfo("PICK UP THE PAYLOAD")
         result = self.pickup_algorithm()
         while not result:
             result = self.pickup_algorithm()
 
             if result == False:
+                rospy.loginfo_throttle(1, "Tidak masuk dalam Pickup Algorithm")
                 for _ in range(30):
                     self.drone.move_vel(0,0,0)
                     rospy.sleep(0.01)
                 # Descend, do the brute force
                 self.z_pid.reset()
-                target_alt = 0.015
+                rospy.loginfo_throttle(0.5, "-------- Target_alt = 0.22 FUNGSI FALSE -------")
+                target_alt = 0.22
                 err = target_alt - self.drone.rangefinder
                 while self.drone.rangefinder < target_alt - 0.001 or self.drone.rangefinder > target_alt + 0.001:
                     err = target_alt - self.drone.rangefinder
                     velz = self.z_pid.update(err)
                     self.drone.move_vel(0, 0, velz)
-                for _ in range(10):
-                    self.drone.move_vel(0.3, 0, 0)
+            #Stop 
+            velz = 0
+            vely = 0 
+            velx = 0
+            rospy.loginfo("STOP FOR STABILITY")
+            for _ in range(15):
+                    self.drone.move_vel(velx,vely,velz)
                     rospy.sleep(0.01)
-    
+            #Move to object slowly
+            velz = 0
+            vely = 0 
+            velx = 0.2
+            rospy.loginfo("MOVE TO OBJECT SLOWLY")
+            for _ in range(20):
+                self.drone.move_vel(velx, vely, velz)
+                rospy.sleep(0.01)
         
         rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        # Call service
+        # self.activate_target(ActivateRequest(False, 1))
         
-        velz = 0.4
+        #Stop after grab the payload
+        rospy.loginfo("STOP")
+        velz = 0
         vely = 0 
         velx = 0
-        for _ in range(10):
+        for _ in range(30):
             self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.01)
+        
+        #NAIK SETELAH AMBIL BARANG
+        velz = 0.2
+        vely = 0 
+        velx = 0
+        rospy.loginfo(f"NAIK SETELAH AMBIL PAYLOAD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(30):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            rospy.sleep(0.1)
+            
+        #MAJU KE POSISI BELOKAN
+        velz = 0
+        vely = 0 
+        velx = 0.2
+        rospy.loginfo(f"MAJU KE PERSIMPANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(40):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
+            rospy.sleep(0.1)
+            
+        self.drone.set_servo(9, 800)
+        
+        velz = 0
+        vely = -0.2 
+        velx = 0
+        rospy.loginfo(f"NYAMPING DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(40):
+            self.drone.move_vel(velx, vely, velz)
+            print(f"pose x = {self.drone.current_pose.pose.pose.position.x}")
+            print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
             rospy.sleep(0.1)
         
         # # 6. Naik dikit setelah ambil barang
@@ -1672,28 +1666,28 @@ class Game:
         # rospy.loginfo(f"Finally, we're in {dist}")
         # rospy.sleep(2)
 
-        velz = 0
-        vely = 0 
-        velx = 0
+        # velz = 0
+        # vely = 0 
+        # velx = 0
         
-        # Move command
-        rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
-        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
-        for _ in range(30):
-            self.drone.move_vel(velx, vely, velz)
-            rospy.sleep(0.1)
+        # # Move command
+        # rospy.loginfo(f"BERHENTI: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(30):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
         
-        # # # 7. Maju 5 meter 
-        velz = 0
-        vely = 0 
-        velx = 0.4
+        # # # # 7. Maju 5 meter 
+        # velz = 0
+        # vely = 0 
+        # velx = 0.4
         
-        # Move command
-        rospy.loginfo(f"MAJU KE PERSIMPANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
-        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
-        for _ in range(72):
-            self.drone.move_vel(velx, vely, velz)
-            rospy.sleep(0.1)
+        # # Move command
+        # rospy.loginfo(f"MAJU KE PERSIMPANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(72):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
         # x, y, z, head = body2local(3, 0, 0, head)
         # dist = {
         #     "x": x, 
@@ -1713,45 +1707,45 @@ class Game:
         # # # misal diterapkan nilai untuk YAW, maka harus di set nilai itu terus di setiap move.
         
         # 8. YAW ke kanan (-90 derajat)
-        x, y, z, head = body2local(0, 0, 0, kiri)
-        dist = {
-            "x": x, 
-            "y": y, 
-            "z": z, 
-            "heading": head
-            }
-        rospy.loginfo(f"We're going to move to YAWWWWWWW KIRI ({dist})")
-        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
-        for _ in range(10):
-            self.drone.move(dist)
-            rospy.sleep(0.1)
-        rospy.sleep(3)
+        # x, y, z, head = body2local(0, 0, 0, kiri)
+        # dist = {
+        #     "x": x, 
+        #     "y": y, 
+        #     "z": z, 
+        #     "heading": head
+        #     }
+        # rospy.loginfo(f"We're going to move to YAWWWWWWW KIRI ({dist})")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        # for _ in range(10):
+        #     self.drone.move(dist)
+        #     rospy.sleep(0.1)
+        # rospy.sleep(3)
         
-        # Maju ke luar ruangan
-        velz = 0
-        vely = 0 
-        velx = 0.4
+        # # Maju ke luar ruangan
+        # velz = 0
+        # vely = 0 
+        # velx = 0.4
         
-        # Move command
-        rospy.loginfo(f"KELUAR RUANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
-        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
-        for _ in range(90):
-            self.drone.move_vel(velx, vely, velz)
-            rospy.sleep(0.1)
+        # # Move command
+        # rospy.loginfo(f"KELUAR RUANGAN DENGAN KECEPATAN: \nvelx: {velx}, vely: {vely}, velz: {velz}")
+        # rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")        
+        # for _ in range(90):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
         
-        self.activate_target(ActivateRequest(True, 2))
+        # self.activate_target(ActivateRequest(True, 2))
 
-        # Do the search
-        rospy.loginfo("-- SEARCH DROP OBJECT BUCKET--")
-        start = rospy.Time.now().to_sec() #.secs
-        result = self.test_color_following()
-        while not result:
-            result = self.test_color_following()
-            self.drone.set_servo(5, 800)
+        # # Do the search
+        # rospy.loginfo("-- SEARCH DROP OBJECT BUCKET--")
+        # start = rospy.Time.now().to_sec() #.secs
+        # result = self.test_color_following()
+        # while not result:
+        #     result = self.test_color_following()
+        #     self.drone.set_servo(5, 800)
         
-            if rospy.Time.now().to_sec() - start > 5:
-                break
-            self.drone.set_servo(5, 800)
+        #     if rospy.Time.now().to_sec() - start > 5:
+        #         break
+        #     self.drone.set_servo(5, 800)
             
         # # STOP
         # velz = 0
@@ -1864,7 +1858,7 @@ class Game:
         rospy.loginfo("Nilai servo akhir adalah 1100")
         self.drone.set_servo(5, 1800)
         
-    def movement(self):
+    def movement(self): #Dipake pas wilayah kemarin
         """
             right: bool, default is False
             Full mission, dengan menyebut nama Allah Yang Maha Pengasih dan Maha Penyayang:
@@ -1899,10 +1893,11 @@ class Game:
         kiri = home_heading + 90
         kanan = -90
         zeros = 0 
-    
         
+        self.obstacle_avoidance_node.start()
+    
         # 0. Set servo to default position
-        # self.drone.set_servo(9, 1f100)
+        # self.drone.set_servo(9, 1800)
         
         # 1. Change to optical flow for indoor mission
         rospy.loginfo("Change to Optical Flow")
@@ -1928,7 +1923,7 @@ class Game:
         velx = 0
         
         # Move command
-        rospy.loginfo(f"NAIKD\nvelx: {velx}, vely: {vely}, velz: {velz}")
+        rospy.loginfo(f"TURUN\nvelx: {velx}, vely: {vely}, velz: {velz}")
         rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
         for _ in range(18):
             self.drone.move_vel(velx, vely, velz)
@@ -1965,32 +1960,33 @@ class Game:
             print(f"pose y = {self.drone.current_pose.pose.pose.position.y}") 
             rospy.sleep(0.1)
         
-        # # 5. Activate Computer Vision
-        # rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
-        # self.activate_target(ActivateRequest(True, 1))
+        # 5. Activate Computer Vision
+        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        self.activate_target(ActivateRequest(True, 1))
         
-        # # # Do the pickup
-        # result = self.pickup_algorithm()
-        # while not result:
-        #     result = self.pickup_algorithm()
+        # # Do the pickup
+        result = self.pickup_algorithm()
+        while not result:
+            result = self.pickup_algorithm()
 
-        #     if result == False:
-        #         for _ in range(30):
-        #             self.drone.move_vel(0,0,0)
-        #             rospy.sleep(0.01)
-        #         # Descend, do the brute force
-        #         self.z_pid.reset()
-        #         target_alt = 0.010
-        #         err = target_alt - self.drone.rangefinder
-        #         while self.drone.rangefinder < target_alt - 0.001 or self.drone.rangefinder > target_alt + 0.001:
-        #             err = target_alt - self.drone.rangefinder
-        #             velz = self.z_pid.update(err)
-        #             self.drone.move_vel(0, 0, velz)
-        #             for _ in range(10):
-        #                 self.drone.move_vel(0.3, 0.1, 0)
-        #                 rospy.sleep(0.01)
+            if result == False:
+                rospy.loginfo_throttle(1.5, "Tidak masuk dalam Pickup Algorithm")
+                for _ in range(30):
+                    self.drone.move_vel(0,0,0)
+                    rospy.sleep(0.01)
+                # Descend, do the brute force
+                self.z_pid.reset()
+                target_alt = 0.010
+                err = target_alt - self.drone.rangefinder
+                while self.drone.rangefinder < target_alt - 0.001 or self.drone.rangefinder > target_alt + 0.001:
+                    err = target_alt - self.drone.rangefinder
+                    velz = self.z_pid.update(err)
+                    self.drone.move_vel(0, 0, velz)
+        for _ in range(10):
+            self.drone.move_vel(0.3, 0, 0)
+            rospy.sleep(0.01)
     
-        # rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
         
         # 6. Naik dikit setelah ambil barang
         # velz = 0
@@ -2805,18 +2801,18 @@ class Game:
 
         # wait 3s
         rospy.sleep(3)
-        if self.sim:
-            rospy.sleep(0.1)
-            # Link them
-            rospy.loginfo("detaching drone and payload")
-            req = AttachRequest()
-            req.model_name_1 = "iris"
-            req.link_name_1 = "iris::drone::iris::base_link"
-            req.model_name_2 = "object kiri"
-            req.link_name_2 = "link"
+        # if self.sim:
+        #     rospy.sleep(0.1)
+        #     # Link them
+        #     rospy.loginfo("detaching drone and payload")
+        #     req = AttachRequest()
+        #     req.model_name_1 = "iris"
+        #     req.link_name_1 = "iris::drone::iris::base_link"
+        #     req.model_name_2 = "object kiri"
+        #     req.link_name_2 = "link"
 
-            resp = self.detach_srv.call(req)
-            rospy.loginfo(f"attach : {resp.ok}")
+        #     resp = self.detach_srv.call(req)
+        #     rospy.loginfo(f"attach : {resp.ok}")
 
 
     
@@ -2910,9 +2906,9 @@ if __name__ == "__main__":
     try:
 
         # UNTUK COMVIS
-        game.movement()
+        # game.movement()
         # UNTUK TANPA COMVIS
-        # game.wilayah()
+        game.wilayah()
         
         # game.last_test()
         
