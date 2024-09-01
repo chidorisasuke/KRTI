@@ -10,8 +10,8 @@ import numpy as np
 # ROS Image message -> OpenCV2 image converter
 from cv_bridge import CvBridge, CvBridgeError
 
-from krti2023_pi.srv import Activate, ActivateResponse
-from krti2023_pi.msg import DResult
+from krti2024_pi.srv import Activate, ActivateResponse
+from krti2024_pi.msg import DResult
 
 # get range from qr/target/elp
 from nav_msgs.msg import Odometry
@@ -76,10 +76,10 @@ class Vision:
         # setup VideoCapture 
         if not self.sim:
             self.down_cap = cv.VideoCapture(camera_index)
-            # self.down_cap.set(cv.CAP_PROP_FRAME_WIDTH, 360)
-            # self.down_cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360)    
-            self.down_cap.set(cv.CAP_PROP_FRAME_WIDTH, 720)
-            self.down_cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)    
+            self.down_cap.set(cv.CAP_PROP_FRAME_WIDTH, 360)
+            self.down_cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360)    
+            # self.down_cap.set(cv.CAP_PROP_FRAME_WIDTH, 720)
+            # self.down_cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)    
             rospy.Timer(rospy.Duration(0.1), self.read_camera)
             
         if self.sim:
@@ -137,7 +137,9 @@ class Vision:
     
     def read_camera(self, msg):
         _, self.down_img = self.down_cap.read()
-        msg = self.bridge.cv2_to_imgmsg(self.down_img)
+        
+        msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(self.down_img,(144,144)), cv.COLOR_BGR2GRAY), encoding="mono8")
+        
         self.down_pub.publish(msg)
 
 
@@ -149,7 +151,7 @@ class Vision:
         rospy.loginfo_throttle(0.1, "image_received")
         try:
             # Convert your ROS Image message to OpenCV2
-            self.down_img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            self.down_img = self.bridge.imgmsg_to_cv2(cv.cvtColor(cv.resize(msg,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
 
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
@@ -172,7 +174,7 @@ class Vision:
         It will publish to the /vision/target/result topic
         with msg type DResult
         """
-        thres = 100
+        thres = 400
         # try:
         img = self.down_img
         img_copy = deepcopy(img)
@@ -233,7 +235,7 @@ class Vision:
                     (10, 100),
                     cv.FONT_HERSHEY_DUPLEX,
                     2,
-                    (0, 0, 255),
+                    (255, 255, 255),
                     1,
                 )
             cv.putText(
@@ -242,13 +244,13 @@ class Vision:
                     (10, 200),
                     cv.FONT_HERSHEY_DUPLEX,
                     2,
-                    (0, 0, 255),
+                    (255, 255, 255),
                     1,
                 )
             fps = 1/ ( rospy.Time.now()-self.last_time).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_imgmsg(img_copy, "bgr8")
+            msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(img_copy,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
             self.target_img_pub.publish(msg)
             return
         for i, contour in enumerate(contours):
@@ -284,7 +286,7 @@ class Vision:
             fps = 1/(rospy.Time.now()-self.last_time ).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (   0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_imgmsg(img_copy, "bgr8")
+            msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(img_copy,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
             self.target_img_pub.publish(msg)
             return
         
@@ -303,7 +305,7 @@ class Vision:
             fps = 1/(rospy.Time.now()-self.last_time ).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (   0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_imgmsg(img_copy, "bgr8")
+            msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(img_copy,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
             self.target_img_pub.publish(msg)
             return
 
@@ -402,10 +404,10 @@ class Vision:
         )
         fps = 1/ (rospy.Time.now()-self.last_time).to_sec()
         self.last_time = rospy.Time.now()
-        cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+        cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
         try:
             # Convert opencv2 img to ros Image
-            msg = self.bridge.cv2_to_imgmsg(img_copy, "bgr8")
+            msg = self.bridge.cv2_to_imgmsg(cv.resize(img_copy,(144,144)), "bgr8")
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
         self.target_img_pub.publish(msg)
