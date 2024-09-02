@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(krti2023_pi)
+project(krti2024_pi)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -175,7 +175,7 @@ catkin_install_python(PROGRAMS
   src/main.py
   src/trial.py
   src/krti2023_pi/drone_api.py
-  src/lidar.py
+  # src/lidar.py
   src/trial.py
   # src/tes_main.py
   test/test_drone_api.py

@@ -1,18 +1,36 @@
 <launch>
 
-    <node name="vision" pkg="krti2023_pi" type="vision.py" args="" output="screen">
+    <node name="vision" pkg="krti2024_pi" type="vision.py" args="" output="screen">
         <rosparam>
-            use_sim: true
+            <!-- for guided in real life, set to false -->
+            use_sim: false 
             verbose: true
             camera_index: 0
-            <!-- target_lower_hsv: [8, 2, 7]
-            target_upper_hsv: [24, 255, 255] -->
-            target_lower_hsv: [0, 100, 100]
-            target_upper_hsv: [20, 255, 255]
-            <!-- target2_lower_hsv: [161, 100, 123]
-            target2_upper_hsv: [188, 240, 255] -->
-            target2_lower_hsv: [0, 255, 94]
-            target2_upper_hsv: [0, 255, 255]
+            <!-- PAYLOAD KANTIN -->
+            <!-- target_lower_hsv: [1,47, 134]
+            target_upper_hsv: [13, 196, 249] -->
+            <!-- PAYLOAD PAGI -->
+            <!-- target_lower_hsv: [134,43, 76]
+            target_upper_hsv: [188, 226, 255] -->
+            <!-- PAYLOAD SIANG -->
+            <!-- target_lower_hsv: [126, 75, 59] -->
+            <!-- target_upper_hsv: [180, 221, 255] -->
+            <!-- PAYLOAD LAP KANTIN -->
+            <!-- target_lower_hsv: [0, 145, 69]
+            target_upper_hsv: [206, 254, 254] -->
+            <!-- PAYLOAD LAP KANTIN SENTER HP -->
+            target_lower_hsv: [0, 19, 56]
+            target_upper_hsv: [20, 250, 255]
+
+            <!-- EMBER KANTIN -->
+            target2_lower_hsv: [162, 68, 81]
+            target2_upper_hsv: [181, 255, 252]
+            <!-- EMBER PAGI -->
+            <!-- target_lower_hsv: [158,125, 102]
+            target_upper_hsv: [176, 255, 255] -->
+            <!-- EMBER SIANG -->
+            <!-- target_lower_hsv: [0, 235, 65]
+            target_upper_hsv: [179, 255, 255] -->
             front_fov_x: 78
             front_fov_y: 78
             down_fov_x: 78

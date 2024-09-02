@@ -32,7 +32,7 @@
 	<arg name="mavros_ns" default="/"/>
 	<arg name="config_yaml" default="$(find mavros)/launch/apm_config.yaml" />
 	<arg name="pluginlists_yaml" value="$(find mavros)/launch/apm_pluginlists.yaml" />
-	<arg name="custom" default="$(find krti2023_pi)/src/krti2023_pi/config/custom.yaml" />
+	<arg name="custom" default="$(find krti2024_pi)/src/krti2024_pi/config/custom.yaml" />
 	<arg name="fcu_protocol" default="v2.0" />
 	
 	<node pkg="mavros" type="mavros_node" name="mavros" required="$(eval not respawn_mavros)" clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_mavros)" ns="$(arg mavros_ns)">
@@ -48,7 +48,7 @@
 		<rosparam command="load" file="$(arg custom)" />
 	</node>
 	
-    <node name="vision" pkg="krti2023_pi" type="vision.py" args="" output="screen">
+    <node name="vision" pkg="krti2024_pi" type="vision.py" args="" output="screen">
         <rosparam>
 			camera_index: 0
             use_sim: false
