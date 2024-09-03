@@ -52,7 +52,7 @@ def getFinalLatLong(lat1, long1, distance, angle) -> GeoPoint:
 
 class Game:
     def __init__(self):
-        rospy.init_node("main_node", log_level=rospy.INFO)
+        rospy.init_node("main_node", log_level=rospy.DEBUG)
 
         self.activate_target = rospy.ServiceProxy("/vision/activate/target", Activate)
         # rospy.loginfo("Creating ServiceProxy to /link_attacher_node/attach")
@@ -75,8 +75,8 @@ class Game:
         waypoints = []
 
         self.drone = DroneAPI(waypoints=waypoints, sim=True)
-        self.x_pid = PID(1, 0.1, 0.1, 0, 2, 0.6, "x")
-        self.y_pid = PID(1, 0.1, 0.1, 0, 2, 0.6, "y")
+        self.x_pid = PID(0.2, 0, 0.1, 0, 1, 0.3, "x")
+        self.y_pid = PID(0.2, 0, 0.1, 0, 1, 0.3, "y")
         self.z_pid = PID(0.2, 0.01, 0.2, 0, 0.5, 0.2, "z", 0.2)
         
         # self.is_safe = Lidar360()
@@ -351,14 +351,14 @@ class Game:
             
 
             if not (self.target_data.dx > 40 or self.target_data.dx < - 40):
-                x_done = True
-
-            if not (self.target_data.dy > 40 or self.target_data.dy < - 40):
                 y_done = True
 
+            if not (self.target_data.dy > 40 or self.target_data.dy < - 40):
+                x_done = True
+
             rospy.logdebug(f"current position : {cur_pose}")
-            velx = self.x_pid.update(-self.target_data.dy/360)
-            vely = self.y_pid.update(-self.target_data.dx/360)
+            velx = self.x_pid.update(self.target_data.dy/360)
+            vely = -self.y_pid.update(self.target_data.dx/360)
             rospy.loginfo(f"velx : {velx}, vely : {vely} ")
             if self.drone.stable_motion():
                 # pass
@@ -368,6 +368,7 @@ class Game:
             
             if x_done and y_done and self.drone.stable_motion() and self.target_data.is_found:
                 return True
+
 
     def main(self):
         while not rospy.is_shutdown():
@@ -2915,23 +2916,23 @@ class Game:
         # self.drone.switch_relay(0, False)
 
         # 1. Set source to optical flow
-        rospy.loginfo(f"Changing source to optical flow")
+        # rospy.loginfo(f"Changing source to optical flow")
         # self.drone.set_ekf_source(1)
 
         # 2. Takeoff
-        # check = self.drone.takeoff(1)
-        # if not check:
-        #     rospy.logerr("takeoff failed")
-        #     rospy.loginfo("trying again")
-        # else:
-        #     rospy.loginfo("takeoff success")
+        check = self.drone.takeoff(1)
+        if not check:
+            rospy.logerr("takeoff failed")
+            rospy.loginfo("trying again")
+        else:
+            rospy.loginfo("takeoff success")
         # rospy.sleep(2)
 
         velz = 0
         vely = 0 
         velx = 0.3
         
-        # Move command        
+        # # Move command        
         for _ in range(35):
             self.drone.move_vel(velx, vely, velz)
             rospy.sleep(0.1)
@@ -2957,21 +2958,22 @@ class Game:
         # Do the pickup
         rospy.loginfo("-- TEST COLOR FOLLOWING --")
         result = self.test_color_following()
-        while not result:
+        while True:
             result = self.test_color_following()
 
-        for _ in range(30):
-            rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
-            self.drone.move_vel(0,0,0)
+
+        # for _ in range(30):
+        #     rospy.loginfo("-- PAYLOAD SHOULD BE ATTACHED, CONTINUING --")
+        #     self.drone.move_vel(0,0,0)
             
-        rospy.spin()
+        # rospy.spin()
         
         # self.drone.set_mode("LAND")
         
 
 if __name__ == "__main__":
     game = Game()
-    try:
+    # try:
 
         # UNTUK COMVIS
         # game.movement()
@@ -2983,7 +2985,7 @@ if __name__ == "__main__":
         # game.check_servo()
         # game.coba_gazebo()
         # game.self_takeoff()
-        game.test_vision()
+    game.test_vision()
         # game.gerak_pos()
 
         # game.test_gazebo_attach()
@@ -2999,10 +3001,10 @@ if __name__ == "__main__":
 
         # game.test_relay()
         # game.test_kiri()
-    except KeyboardInterrupt:
-        game.drone.set_mode("LAND")
-        exit()
-    except rospy.ROSInterruptException:
-        pass
-    finally:
-        rospy.logdebug("exit")
+    # except KeyboardInterrupt:
+    #     game.drone.set_mode("LAND")
+    #     exit()
+    # except rospy.ROSInterruptException:
+    #     pass
+    # finally:
+    #     rospy.logdebug("exit")

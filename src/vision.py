@@ -140,7 +140,6 @@ class Vision:
         self.down_img = cv.rotate(self.down_img, cv.ROTATE_180)
         
         msg = self.bridge.cv2_to_compressed_imgmsg(self.down_img,dst_format="jpg")
-        
         self.down_pub.publish(msg)
 
 
@@ -152,7 +151,8 @@ class Vision:
         rospy.loginfo_throttle(0.1, "image_received")
         try:
             # Convert your ROS Image message to OpenCV2
-            self.down_img = self.bridge.compressed_imgmsg_to_cv2(msg)
+            img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.down_img = cv.rotate(img, cv.ROTATE_180)
 
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
@@ -176,12 +176,13 @@ class Vision:
         with msg type DResult
         """
         thres = 400
-        # try:
-        img = self.down_img
-        img_copy = deepcopy(img)
-        Fwidth = img.shape[1]
-        Fheight = img.shape[0]
-    # except:
+        try:
+            img = self.down_img
+            img_copy = deepcopy(img)
+            Fwidth = img.shape[1]
+            Fheight = img.shape[0]
+        except:
+            return
     #     pass
     # else:
         FWcenter = Fwidth // 2
@@ -363,7 +364,7 @@ class Vision:
         cv.line(
             img_copy,
             (FWcenter, FHcenter),
-            (FWcenter + dx, FHcenter + dy),
+            (FWcenter + dx, FHcenter - dy),
             color,
             3
         )
