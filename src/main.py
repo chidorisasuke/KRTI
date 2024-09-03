@@ -52,7 +52,7 @@ def getFinalLatLong(lat1, long1, distance, angle) -> GeoPoint:
 
 class Game:
     def __init__(self):
-        rospy.init_node("main_node", log_level=rospy.DEBUG)
+        rospy.init_node("main_node", log_level=rospy.INFO)
 
         self.activate_target = rospy.ServiceProxy("/vision/activate/target", Activate)
         # rospy.loginfo("Creating ServiceProxy to /link_attacher_node/attach")
@@ -75,8 +75,8 @@ class Game:
         waypoints = []
 
         self.drone = DroneAPI(waypoints=waypoints, sim=True)
-        self.x_pid = PID(0.5, 0.01, 0.1, 0, 1, 0.5, "x")
-        self.y_pid = PID(0.3, 0.01, 0.1, 0, 1, 0.5, "y")
+        self.x_pid = PID(1, 0.1, 0.1, 0, 2, 0.6, "x")
+        self.y_pid = PID(1, 0.1, 0.1, 0, 2, 0.6, "y")
         self.z_pid = PID(0.2, 0.01, 0.2, 0, 0.5, 0.2, "z", 0.2)
         
         # self.is_safe = Lidar360()
@@ -336,7 +336,7 @@ class Game:
 
         while not self.target_data.is_found :
             rospy.loginfo_throttle(0.2,"waiting for target")
-            if rospy.Time.now().to_sec() - now > rospy.Duration(10):
+            if rospy.Time.now().to_sec() - now.to_sec() > rospy.Duration(10).to_sec():
                 rospy.loginfo("timeout")
                 return False
 
@@ -2852,14 +2852,33 @@ class Game:
         for _ in range(20):
             self.drone.move(dist)
             rospy.sleep(0.1)
-        
+            
         for _ in range(20):
             self.drone.stop()
             rospy.sleep(0.1)
+            
+        # rospy.sleep(2)
+            
+        x, y, z, head = body2local(1, 0, 0, head)
+        dist = {
+            "x": x, 
+            "y": y, 
+            "z": z, 
+            "heading": head
+            }
+        rospy.loginfo(f"MAJU 1 METER ({dist})")
+        rospy.loginfo(f"home heading: {home_heading}\ncurrent heading: {head}")
+        for _ in range(10):
+            self.drone.move(dist)
+            rospy.sleep(0.1)
         
-        rospy.spin()
+        for _ in range(50):
+            self.drone.stop()
+            rospy.sleep(0.1)
         
-        # self.drone.set_mode("LAND")
+        # rospy.spin()
+        
+        self.drone.set_mode("LAND")
         
 
     def test_vision(self):
@@ -2897,25 +2916,25 @@ class Game:
 
         # 1. Set source to optical flow
         rospy.loginfo(f"Changing source to optical flow")
-        self.drone.set_ekf_source(1)
+        # self.drone.set_ekf_source(1)
 
         # 2. Takeoff
-        check = self.drone.takeoff(0.5)
-        if not check:
-            rospy.logerr("takeoff failed")
-            rospy.loginfo("trying again")
-        else:
-            rospy.loginfo("takeoff success")
-        rospy.sleep(2)
+        # check = self.drone.takeoff(1)
+        # if not check:
+        #     rospy.logerr("takeoff failed")
+        #     rospy.loginfo("trying again")
+        # else:
+        #     rospy.loginfo("takeoff success")
+        # rospy.sleep(2)
 
-        # velz = 0
-        # vely = 0 
-        # velx = 0.3
+        velz = 0
+        vely = 0 
+        velx = 0.3
         
-        # # Move command        
-        # for _ in range(30):
-        #     self.drone.move_vel(velx, vely, velz)
-        #     rospy.sleep(0.01)
+        # Move command        
+        for _ in range(35):
+            self.drone.move_vel(velx, vely, velz)
+            rospy.sleep(0.1)
         
         
         # Check if waypoint is reached or not
@@ -2925,6 +2944,7 @@ class Game:
         #     rospy.loginfo_throttle(0.2,"[WP 1] waiting for wp reached")
 
         # Call service
+        rospy.loginfo("-- CALL SERVICE --")
         self.activate_target(ActivateRequest(True, 1))
 
         # self.drone.stop()
@@ -2935,6 +2955,7 @@ class Game:
         rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
 
         # Do the pickup
+        rospy.loginfo("-- TEST COLOR FOLLOWING --")
         result = self.test_color_following()
         while not result:
             result = self.test_color_following()
@@ -2962,8 +2983,8 @@ if __name__ == "__main__":
         # game.check_servo()
         # game.coba_gazebo()
         # game.self_takeoff()
-        # game.test_vision()
-        game.gerak_pos()
+        game.test_vision()
+        # game.gerak_pos()
 
         # game.test_gazebo_attach()
 

@@ -19,9 +19,12 @@
             <!-- target_lower_hsv: [0, 145, 69]
             target_upper_hsv: [206, 254, 254] -->
             <!-- PAYLOAD LAP KANTIN SENTER HP -->
-            target_lower_hsv: [0, 19, 56]
-            target_upper_hsv: [20, 250, 255]
+            <!-- target_lower_hsv: [0, 19, 56]
+            target_upper_hsv: [20, 250, 255] -->
 
+            <!-- PAYLOAD ACC MALAM -->
+            target_lower_hsv: [1, 120, 65]
+            target_upper_hsv: [183, 230, 255]
             <!-- EMBER KANTIN -->
             target2_lower_hsv: [162, 68, 81]
             target2_upper_hsv: [181, 255, 252]

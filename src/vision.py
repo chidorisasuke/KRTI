@@ -137,6 +137,7 @@ class Vision:
     
     def read_camera(self, msg):
         _, self.down_img = self.down_cap.read()
+        self.down_img = cv.rotate(self.down_img, cv.ROTATE_180)
         
         msg = self.bridge.cv2_to_compressed_imgmsg(self.down_img,dst_format="jpg")
         
@@ -259,7 +260,7 @@ class Vision:
             rect = cv.boundingRect(contour)
             x, y, w, h = rect
             dx = int(w / 2 + x - FWcenter)
-            dy = int(h / 2 + y - FHcenter)
+            dy = int((h / 2 + y - FHcenter)* -1)
             data.append((area,
                             rect,
                             dx,
@@ -318,8 +319,8 @@ class Vision:
             thr = 1.2
             validx = []
             validy = []
-            print("avgx ", avgx)
-            print("stdx ", stdx)
+            print("avgx\t: ", avgx)
+            print("stdx\t: ", stdx)
             for i in range(len(data)):
                 z_scorex = (data["dx"][i]-avgx)/stdx
                 z_scorey = (data["dy"][i]-avgy)/stdy
@@ -336,15 +337,15 @@ class Vision:
             else:
                 dx = int(np.mean(validx))
                 dy = int(np.mean(validy))
-                print(f"dx:{validx}, dy:{validy}")
-                print(f"dx:{dx}, dy:{dy}")
+                print(f"dx\t: {validx}, \tdy\t: {validy}")
+                print(f"dx\t: {dx}, \tdy\t: {dy}")
         else:
             dx = int(np.mean(data["dx"]))
             dy = int(np.mean(data["dy"]))
-            print(f"dx:{dx}, dy:{dy}")
+            print(f"dx\t: {dx}, \tdy\t: {dy}")
         x_m, y_m = self.calculate_meter_from_pixel(dx, dy, Fwidth, Fheight)
 
-        rospy.logdebug_throttle(0.2, f"dx:, {dx}, dy:, {dy}, x_m:, {x_m}, y_m:, {y_m}")
+        rospy.logdebug_throttle(0.2, f"dx\t: {dx}, \tdy\t:, {dy}, \tx_m\t:, {x_m}, \ty_m\t:, {y_m}")
         self.target_result_pub.publish(DResult(True, dx, dy, x_m, y_m))
 
         color = (

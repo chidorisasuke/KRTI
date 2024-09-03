@@ -162,10 +162,10 @@ class DroneAPI:
         # LIDAR data
         self.lidar_queue = []
         self.lidar_data = LaserScan()
-        if self.sim:
-            lidar_sub = rospy.Subscriber("/sensors/lidar/sim", LaserScan, self.lidar_cb)
-        else:
-            self.setup_lidar()
+        # if self.sim:
+        #     lidar_sub = rospy.Subscriber("/sensors/lidar/sim", LaserScan, self.lidar_cb)
+        # else:
+        #     self.setup_lidar()
 
 
         rospy.Timer(rospy.Duration(0.05), self.lidar_pub)
@@ -216,6 +216,7 @@ class DroneAPI:
         request = Twist()
         request.linear = Vector3(velx,vely,velz)    
         self.local_desired_heading = heading
+        rospy.loginfo(f"Move with velocity:\n{request.linear}")
         print(heading)
         print(self.current_heading)
         err_head = heading - self.current_heading
@@ -425,6 +426,8 @@ class DroneAPI:
         request.message_rate = rate
         request.on_off = 1
         request.stream_id = 0
+        
+        client(request)
 
     def set_mode(self, mode: str = "GUIDED"):
         """
@@ -497,7 +500,7 @@ class DroneAPI:
             else:
                 rospy.loginfo("Drone is disarmed")
 
-    def takeoff(self, altitude: float = 3.0):
+    def  takeoff(self, altitude: float = 3.0):
         """
         A function to give drone a takeoff command
 
@@ -563,8 +566,8 @@ class DroneAPI:
         rospy.loginfo("Stopping")
         home_heading = radians(self.get_home_heading())
 
-        x,y = self.body2local(0, 0, home_heading)
-        dist = {"x": x, "y": y, "z": 0, "heading": home_heading}
+        x,y,z = self.body2local(0, 0, 0, home_heading)
+        dist = {"x": x, "y": y, "z": z, "heading": home_heading}
 
         # Move command        
         for _ in range(30):
@@ -595,7 +598,7 @@ class DroneAPI:
                 If no destination passed then drone will go to
                 current destination in the waypoint list
         """
-
+        rospy.loginfo(f"testing home heading on move method : {self.home_heading}")
         self.previous_pose = self.current_pose
         ref_pose = self.current_pose.pose.pose.position
         # Get client
@@ -733,11 +736,12 @@ class DroneAPI:
 
         # get parameter
         request = CommandLongRequest()
-        request.command = 183 # MAV_CMD_DO_SET_RELAY
+        request.command = 183 # MAV_CMD_DO_SET_SERVO
         request.param1 = servo
         request.param2 = pwm 
+        client(request)
 
-        return self.send_mavlink_command(request)
+        #return self.send_mavlink_command(request)
     
     def set_ekf_source(self, ekf: int = 1):
         """
