@@ -1,7 +1,7 @@
 import rospy
 
 # ROS Image message
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 
 # OpenCV2 for saving an image
 import cv2 as cv
@@ -109,10 +109,10 @@ class Vision:
 
         # publisher for processed image
         self.target_img_pub = rospy.Publisher(
-            "/vision/target/image", Image, queue_size=10
+            "/vision/target/image/compressed", CompressedImage, queue_size=10
         )
 
-        self.down_pub = rospy.Publisher("/camera/down/image", Image, queue_size=10)
+        self.down_pub = rospy.Publisher("/camera/down/image/compressed", CompressedImage, queue_size=10)
 
     def activate_target(self, data):
         """
@@ -138,7 +138,7 @@ class Vision:
     def read_camera(self, msg):
         _, self.down_img = self.down_cap.read()
         
-        msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(self.down_img,(144,144)), cv.COLOR_BGR2GRAY), encoding="mono8")
+        msg = self.bridge.cv2_to_compressed_imgmsg(self.down_img,dst_format="jpg")
         
         self.down_pub.publish(msg)
 
@@ -151,7 +151,7 @@ class Vision:
         rospy.loginfo_throttle(0.1, "image_received")
         try:
             # Convert your ROS Image message to OpenCV2
-            self.down_img = self.bridge.imgmsg_to_cv2(cv.cvtColor(cv.resize(msg,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
+            self.down_img = self.bridge.compressed_imgmsg_to_cv2(msg)
 
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
@@ -250,7 +250,7 @@ class Vision:
             fps = 1/ ( rospy.Time.now()-self.last_time).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(img_copy,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
+            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
             self.target_img_pub.publish(msg)
             return
         for i, contour in enumerate(contours):
@@ -286,7 +286,7 @@ class Vision:
             fps = 1/(rospy.Time.now()-self.last_time ).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (   0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(img_copy,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
+            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
             self.target_img_pub.publish(msg)
             return
         
@@ -305,7 +305,7 @@ class Vision:
             fps = 1/(rospy.Time.now()-self.last_time ).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (   0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_imgmsg(cv.cvtColor(cv.resize(img_copy,(144,144)), cv.COLOR_BGR2GRAY), "mono8")
+            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
             self.target_img_pub.publish(msg)
             return
 
@@ -407,7 +407,7 @@ class Vision:
         cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
         try:
             # Convert opencv2 img to ros Image
-            msg = self.bridge.cv2_to_imgmsg(cv.resize(img_copy,(144,144)), "bgr8")
+            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
         self.target_img_pub.publish(msg)
