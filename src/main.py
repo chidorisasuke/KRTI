@@ -333,6 +333,11 @@ class Game:
         # Destination
         home_heading = self.drone.get_home_heading()
         head = radians(home_heading)
+        last_dx = 0
+        last_dy = 0
+        velx = 0
+        vely = 0
+        
 
         while not self.target_data.is_found :
             rospy.loginfo_throttle(0.2,"waiting for target")
@@ -343,31 +348,40 @@ class Game:
         while not rospy.is_shutdown() :
         
             # self.move() maju beberapa cm ke depan untuk mencocokan posisi magnet dengan target
-            cur_pose = {
-                "x": 0,
-                "y": 0,
-                "z": 0,
-            }
-            
+            # cur_pose = {
+            #     "x": 0,
+            #     "y": 0,
+            #     "z": 0,
+            # }
 
+            
             if not (self.target_data.dx > 40 or self.target_data.dx < - 40):
                 y_done = True
 
             if not (self.target_data.dy > 40 or self.target_data.dy < - 40):
                 x_done = True
 
-            rospy.logdebug(f"current position : {cur_pose}")
-            velx = self.x_pid.update(self.target_data.dy/360)
-            vely = -self.y_pid.update(self.target_data.dx/360)
-            rospy.loginfo(f"velx : {velx}, vely : {vely} ")
+            if(self.target_data.is_found):
+                # rospy.logdebug(f"current position : {cur_pose}")
+                velx = self.x_pid.update(self.target_data.dy/360)
+                vely = -self.y_pid.update(self.target_data.dx/360)
+                
+                # rospy.sleep(1)
+                last_dx = self.target_data.dx
+                last_dy = self.target_data.dy
+            else:
+                vely = 0.2 if last_dx < 0 else -0.2
+                velx = 0.2 if last_dy > 0 else -0.2
             if self.drone.stable_motion():
+                rospy.loginfo(f"moving with velx : {velx}, vely : {vely} ")
                 # pass
-                rospy.loginfo("Drone sedang menyesuaikan posisi dengan payload")
+                # rospy.loginfo("Drone sedang menyesuaikan posisi dengan payload")
                 self.drone.move_vel(velx, vely,0)
-            # rospy.sleep(1)
             
             if x_done and y_done and self.drone.stable_motion() and self.target_data.is_found:
                 return True
+            
+            
 
 
     def main(self):
