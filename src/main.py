@@ -12,7 +12,7 @@ from krti2024_pi.srv import Activate, ActivateRequest, ActivateResponse
 #from gazebo_ros_link_attacher.srv import Attach, AttachRequest, AttachResponse
 #from gazebo_ros_link_detacher.srv import Detach, DetachRequest, DetachResponse
 import rospy
-from geographic_msgs.msg import GeoPoint
+from geographic_msgs.msg import GeoPoint,GeoPoseStamped
 from time import sleep
 from math import *
 import math
@@ -88,7 +88,6 @@ class Game:
         # self.last_avoidance_timestamp = 0
         # self.avoid = False
         # self.collision_sub = rospy.Subscriber('/sensors/lidar/sim', LaserScan, self.lidar_avoidance_cb)
-
 
     def target_callback(self, msg):
         self.target_data = msg
@@ -272,6 +271,7 @@ class Game:
                 move_to["y"] -= 0.1
             else:
                 x_done = True
+
 
             if self.target_data.dy > 80:
                 rospy.logdebug("move backward")
@@ -2894,6 +2894,77 @@ class Game:
         # rospy.spin()
         
         self.drone.set_mode("LAND")
+    def geopoint2geopose(self,point:GeoPoint)->GeoPoseStamped:
+        
+        pose = GeoPoseStamped()
+        pose.pose.position.latitude = point.latitude
+        pose.pose.position.longitude = point.longitude
+        pose.pose.position.altitude = point.altitude
+        return pose
+
+
+    def outdoor(self):
+        
+        self.drone.wait4start()
+        # Destination
+        self.drone.set_home()
+        home_heading = self.drone.compass
+
+        head = radians(home_heading)
+        print("compass heading: ",home_heading)
+        print("imu heading: ",self.drone.imu_heading)
+        print("cur heading: ",self.drone.current_heading)
+
+        # 0. Relay as ON
+        # self.drone.switch_relay(0, False)
+
+        # 1. Set source to optical flow
+        # rospy.loginfo(f"Changing source to optical flow")
+        self.drone.set_ekf_source(1)
+
+
+
+        
+
+        gps = self.drone.gps
+        coordinate = getFinalLatLong(gps.latitude,gps.longitude,10,home_heading)
+        coordinate.altitude = 5
+        
+# 
+        # 2. Takeoff
+        check = self.drone.takeoff(5)
+        if not check:
+            rospy.logerr("takeoff failed")
+            rospy.loginfo("trying again")
+        else:
+            rospy.loginfo("takeoff success")
+        rospy.sleep(5)
+
+
+
+        self.drone.move_global(coordinate=self.geopoint2geopose(coordinate),heading=0)
+        # self.drone.move_global_raw(coordinate,0)
+
+        rospy.spin()
+
+
+
+        # velz = 0
+        # vely = 0 
+        # velx = 0.3
+        
+        # # # Move command        
+        # for _ in range(35):
+        #     self.drone.move_vel(velx, vely, velz)
+        #     rospy.sleep(0.1)
+        
+        
+        # Check if waypoint is reached or not
+        # while not self.drone.check_waypoint_reached(dist):
+        #     # self.drone.move(dist)
+        #     rospy.loginfo_throttle(0.2,f"[WP 1] current pose : {self.drone.current_pose.pose.pose.position} ")
+        #     rospy.loginfo_throttle(0.2,"[WP 1] waiting for wp reached")
+
         
 
     def test_vision(self):
@@ -2999,7 +3070,7 @@ if __name__ == "__main__":
         # game.check_servo()
         # game.coba_gazebo()
         # game.self_takeoff()
-    game.test_vision()
+    game.outdoor()
         # game.gerak_pos()
 
         # game.test_gazebo_attach()

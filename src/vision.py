@@ -97,7 +97,7 @@ class Vision:
 
         self.timestamp = rospy.Time.now()
         # to start subscribing to the image_topic and starting the QR code detection
-        self.activate_target = rospy.Service(
+        self.activate_target_server = rospy.Service(
             "vision/activate/target", Activate, self.activate_target
         )
         
@@ -130,7 +130,7 @@ class Vision:
 
         else:
             rospy.loginfo("Target detect deactivated")
-            self.img_sub.unregister()
+            # self.img_sub.unregister()
             self.target = False
         
         return ActivateResponse(True)
