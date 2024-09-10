@@ -14,26 +14,41 @@
             target_upper_hsv: [188, 226, 255] -->
             <!-- PAYLOAD SIANG -->
             <!-- target_lower_hsv: [126, 75, 59] -->
-            <!-- target_upper_hsv: [180, 221, 255] -->
+            <!-- target_upper_hsv: [180, 221, 25    5] -->
             <!-- PAYLOAD LAP KANTIN -->
-            <!-- target_lower_hsv: [0, 145, 69]
-            target_upper_hsv: [206, 254, 254] -->
-            <!-- PAYLOAD LAP KANTIN SENTER HP -->
-            <!-- target_lower_hsv: [0, 19, 56]
-            target_upper_hsv: [20, 250, 255] -->
+            <!-- target_lower_hsv: [141, 76, 75]
+            target_upper_hsv: [185, 249, 255] -->
+            <!-- PAYLOAD LAP KANTIN MALAM -->
+            target_lower_hsv: [7, 52, 94]
+            target_upper_hsv: [17, 196, 255]
+            <!-- PAYLOAD PARKIR MALAM -->
+            <!-- target_lower_hsv: [6, 85, 137] -->
+            <!-- target_upper_hsv: [12, 202, 245] -->
+            <!-- COBA -->
+            <!-- target_lower_hsv: [0, 113, 78] -->
+            <!-- target_upper_hsv: [202, 174, 149] -->
 
             <!-- PAYLOAD ACC MALAM -->
-            target_lower_hsv: [1, 120, 65]
-            target_upper_hsv: [183, 230, 255]
-            <!-- EMBER KANTIN -->
-            target2_lower_hsv: [162, 68, 81]
-            target2_upper_hsv: [181, 255, 252]
+            <!-- target_lower_hsv: [1, 120, 65] -->
+            <!-- target_upper_hsv: [183, 230, 255] -->
+            <!-- PAYLOAD FST MALAM -->
+            <!-- target_lower_hsv: [1, 108, 84]
+            target_upper_hsv: [8, 255, 255] -->
+            <!-- EMBER KANTIN MALAM -->
+            target2_lower_hsv: [0, 195, 72]
+            target2_upper_hsv: [183, 255, 170]
+            <!-- EMBER PARKIR MALAM -->
+            <!-- target2_lower_hsv: [0, 194, 48] -->
+            <!-- target2_upper_hsv: [183, 255, 202] -->
             <!-- EMBER PAGI -->
-            <!-- target_lower_hsv: [158,125, 102]
-            target_upper_hsv: [176, 255, 255] -->
+            <!-- target2_lower_hsv: [158,125, 102] -->
+            <!-- target2_upper_hsv: [176, 255, 255] -->
             <!-- EMBER SIANG -->
             <!-- target_lower_hsv: [0, 235, 65]
             target_upper_hsv: [179, 255, 255] -->
+
+            target3_lower_hsv: [17, 66,107]
+            target3_upper_hsv: [59, 122,207]
             front_fov_x: 78
             front_fov_y: 78
             down_fov_x: 78

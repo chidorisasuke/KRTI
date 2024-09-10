@@ -14,6 +14,22 @@ from mavros_msgs.srv import CommandTOL, CommandTOLRequest
 from mavros_msgs.srv import StreamRate, StreamRateRequest
 from sensor_msgs.msg import LaserScan, Imu, NavSatFix, Range
 from serial import Serial
+
+from pygeodesy.geoids import GeoidPGM
+import numpy as np
+
+_egm96 = GeoidPGM('/usr/share/GeographicLib/geoids/egm96-5.pgm', kind=-3)
+
+def geoid_height(lat, lon):
+    """Calculates AMSL to ellipsoid conversion offset.
+    Uses EGM96 data with 5' grid and cubic interpolation.
+    The value returned can help you convert from meters 
+    above mean sea level (AMSL) to meters above
+    the WGS84 ellipsoid.
+    If you want to go from AMSL to ellipsoid height, add the value.
+    To go from ellipsoid height to AMSL, subtract this value.
+    """
+    return _egm96.height(lat, lon)
 # IF USING RASPI
 # import board
 # import busio
@@ -185,9 +201,15 @@ class DroneAPI:
         
         # Print success
         rospy.loginfo("Initialization completed.")
+        
+    def set_home(self):
+        self.home_gps = self.gps
+        self.home_compass = self.compass
+        self.home_heading = self.current_heading
 
     def gps_cb(self, data: NavSatFix):
         self.gps = data
+        
     
     def ultrasonic_cb(self, msg: float):
         try:
@@ -221,12 +243,12 @@ class DroneAPI:
         print(self.current_heading)
         err_head = heading - self.current_heading
 
-        if err_head > 180:
-            err_head -= 360
-        elif err_head < -180:
-            err_head += 360
+        # if err_head > 180:
+        #     err_head -= 360
+        # elif err_head < -180:
+        #     err_head += 360
         
-        val = self.yaw_pid.update(-err_head)
+        # val = self.yaw_pid.update(-err_head)
         val = 0
         request.angular.z = val
 
@@ -328,7 +350,7 @@ class DroneAPI:
             self.home_compass = self.compass
             self.home_heading = self.current_heading
             self.local_desired_heading = self.home_heading
-            print("home heading : ", self.home_heading)
+            # print("home heading : ", self.home_heading)
 
     def set_origin(self, origin: dict):
         """
@@ -371,7 +393,7 @@ class DroneAPI:
 
 
     def get_home_heading(self):
-        return self.home_heading
+        return self.home_compass
 
     def get_parameter(self, name: str):
         """
@@ -396,7 +418,7 @@ class DroneAPI:
 
     def stable_motion(self):
         z = self.imu.linear_acceleration.z
-        if(z > 9.65 and z < 10):
+        if(z > 9.68 and z < 9.9):
             return True
         return False
     
@@ -420,12 +442,15 @@ class DroneAPI:
         # Send request
         client(request)
     
+    def use_gps(self,use:bool = True):
+        self.set_parameter("AHRS_GPS_USE",1 if use else 0)
+    
     def set_stream_rate(self, rate: int = 10):
         client = rospy.ServiceProxy("/mavros/set_stream_rate", StreamRate)
-        request = StreamRateRequest()
-        request.message_rate = rate
-        request.on_off = 1
-        request.stream_id = 0
+        request = StreamRateRequest(0, 100, 1)
+        # request.message_rate = rate
+        # request.on_off = 1
+        # request.stream_id = 0
         
         client(request)
 
@@ -517,7 +542,7 @@ class DroneAPI:
             rospy.loginfo("altitude already reached")
             return 1
         
-        if self.current_pose.pose.pose.position.z > 0.25:
+        if self.current_pose.pose.pose.position.z > 0.45:
             rospy.loginfo("drone already in air")
             return 1
         
@@ -646,7 +671,7 @@ class DroneAPI:
             f"Moving to x: {destination['x']}; y: {destination['y']}; z: {destination['z']}"
         )
 
-    def move_global(self, coordinate: GeoPoint, heading = None):
+    def move_global_raw(self, coordinate: GeoPoint, heading = None):
         """
             IMPORTANT NOTES:
         - in simulation we need to send the msg  multiple times to make it work
@@ -667,7 +692,7 @@ class DroneAPI:
         request = GlobalPositionTarget()
         request.header.stamp = rospy.Time.now()
 
-        request.coordinate_frame = 6
+        request.coordinate_frame = 3
         request.latitude = coordinate.latitude
         request.longitude = coordinate.longitude
         request.altitude = coordinate.altitude
@@ -676,17 +701,57 @@ class DroneAPI:
         rospy.loginfo_throttle(0.2,f"longitude : {self.gps.longitude} ")
         rospy.loginfo_throttle(0.2,f"altitude : {self.gps.altitude} ")
         rospy.loginfo_throttle(0.2,f"position : {self.current_pose} ")
-        rospy.loginfo_throttle(0.2,f"heading : {self.current_heading} ")
+        rospy.loginfo_throttle(0.2,f"heading : {self.compass} ")
 
         if heading is not None:
             request.yaw = radians(heading)
             self.local_desired_heading = heading
         else:
             request.yaw = radians(self.home_compass)
-
+        
+        request.type_mask = 1024 # ignore yaw
+        
         # Send request
         rospy.logdebug("publishing setpoint_raw/global", logger_name="move_global")
-        client.publish(request)
+            
+        for i in range(30):
+            client.publish(request)
+            rospy.sleep(0.01)
+            
+    def move_global(self, coordinate: GeoPoseStamped = None, heading = None,lat:float=None,lon:float=None, alt:float=None):
+        """
+            IMPORTANT NOTES:
+        - in simulation we need to send the msg  multiple times to make it work
+        - in real drone we shouldn't send the msg multiple times but sometimes we need to
+        A function to move the drone to certain position in global frame
+        """
+
+        # Get client
+        client = rospy.Publisher(
+            "/mavros/setpoint_position/global",
+            GeoPoseStamped,
+            queue_size=10,
+        )
+        # coordinate.altitude = gps.altitude-geoid_height(gps.latitude,gps.longitude)+alt
+        request = GeoPoseStamped()
+        if coordinate is not None:
+            request = coordinate
+            # request.pose.position.altitude = self.home_gps.altitude - geoid_height(self.gps.latitude,self.gps.longitude) + request.pose.position.altitude
+            # request.pose.position.altitude = request.pose.position.altitude
+        elif lat is not None and lon is not None and alt is not None:
+            request.pose.position.latitude = lat
+            request.pose.position.longitude = lon
+            request.pose.position.altitude = self.home_gps.altitude - geoid_height(self.gps.latitude,self.gps.longitude) + alt
+        request.header.stamp = rospy.Time.now()
+        if heading is not None:
+            request.pose.orientation = self.calculate_heading(heading)
+        else:
+            request.pose.orientation = self.calculate_heading(self.home_compass)
+
+        rospy.logdebug("publishing setpoint_position/global", logger_name="move_global")
+        for i in range(30):
+            client.publish(request)
+            rospy.sleep(0.01)
 
     def send_mavlink_command(self, request: CommandLongRequest):
         """
@@ -864,7 +929,7 @@ class DroneAPI:
         rospy.logdebug_throttle(0.2,f"dist from wp :{dist}")
         
         # with heading check
-        if dist < pos_tol and dHead < head_tol:
+        if dist < pos_tol :
             return 1
         else:
             return 0
@@ -918,21 +983,24 @@ class DroneAPI:
         pitch = 0.0
         roll = 0.0
 
-        cy = cos(yaw * 0.5)
-        sy = sin(yaw * 0.5)
+        # cy = cos(yaw * 0.5)
+        # sy = sin(yaw * 0.5)
 
-        cr = cos(roll * 0.5)
-        sr = sin(roll * 0.5)
+        # cr = cos(roll * 0.5)
+        # sr = sin(roll * 0.5)
 
-        cp = cos(pitch * 0.5)
-        sp = sin(pitch * 0.5)
+        # cp = cos(pitch * 0.5)
+        # sp = sin(pitch * 0.5)
 
-        qw = cy * cr * cp + sy * sr * sp
-        qx = cy * sr * cp - sy * cr * sp
-        qy = cy * cr * sp + sy * sr * cp
-        qz = sy * cr * cp - cy * sr * sp
+        qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+        qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+        qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+        qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
 
-        return Quaternion(qx, qy, qz, qw)
+        q = Quaternion()
+        q.x, q.y, q.z, q.w = qx, qy, qz, qw
+        
+        return q
 
     def set_heading(self, heading:float):
         self.local_desired_heading = heading
