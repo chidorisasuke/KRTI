@@ -3010,6 +3010,7 @@ class Game:
         coordinate.altitude = 3
         coordinate.latitude = -7.26455
         coordinate.longitude = 112.78474
+        # 
 
 # # 
 #       # 2. Takeoff
