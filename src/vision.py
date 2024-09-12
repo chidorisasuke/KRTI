@@ -142,6 +142,7 @@ class Vision:
         _, self.down_img = self.down_cap.read()
         # self.down_img = cv.rotate(self.down_img, cv.ROTATE_180)
         
+        # NYALAKAN CAMERA TANPA COMVIS
         # msg = self.bridge.cv2_to_compressed_imgmsg(cv.resize(self.down_img,(120,120)),dst_format="jpg")
         # self.down_pub.publish(msg)
 
@@ -155,6 +156,7 @@ class Vision:
         try:
             # Convert your ROS Image message to OpenCV2
             img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            # JIKA MENGGUNAKAN KAMERA KABEL PANJANG
             # self.down_img = cv.rotate(img, cv.ROTATE_180)
 
         except CvBridgeError as e:
@@ -179,7 +181,6 @@ class Vision:
         with msg type DResult
         """
         thres = 400
-        # if self.which_target == 3:
         try:
             img = self.down_img
             img_copy = deepcopy(img)

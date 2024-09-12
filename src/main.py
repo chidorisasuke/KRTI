@@ -401,6 +401,11 @@ class Game:
         # Destination
         home_heading = self.drone.get_home_heading()
         head = radians(home_heading)
+        last_dx = 0
+        last_dy = 0
+        velx = 0
+        vely = 0
+        
 
         while not self.target_data.is_found :
             rospy.loginfo_throttle(0.2,"waiting for target")
@@ -451,6 +456,7 @@ class Game:
                 
             
             if self.drone.stable_motion():
+                rospy.loginfo(f"moving with velx : {velx}, vely : {vely} ")
                 # pass
                 rospy.loginfo("Drone sedang menyesuaikan posisi dengan payload")
                 move_detect = self.drone.move_vel(
@@ -463,6 +469,9 @@ class Game:
             
             if x_done and y_done and self.drone.stable_motion() and self.target_data.is_found:
                 return True
+            
+            
+
 
 
     def main(self):
