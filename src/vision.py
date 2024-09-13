@@ -70,6 +70,12 @@ class Vision:
         
         self.target2_lower_hsv = np.array(rospy.get_param("/vision/target2_lower_hsv"))
         self.target2_upper_hsv = np.array(rospy.get_param("/vision/target2_upper_hsv"))
+        
+        self.target3_lower_hsv = np.array(rospy.get_param("/vision/target3_lower_hsv"))
+        self.target3_upper_hsv = np.array(rospy.get_param("/vision/target3_upper_hsv"))
+        
+        self.target4_lower_hsv = np.array(rospy.get_param("/vision/target4_lower_hsv"))
+        self.target4_upper_hsv = np.array(rospy.get_param("/vision/target4_upper_hsv"))
 
         self.sim = rospy.get_param("/vision/use_sim")
         self.sim_camera_topic = "/camera/down/image_raw"
@@ -80,7 +86,7 @@ class Vision:
             self.down_cap.set(cv.CAP_PROP_FRAME_HEIGHT, 360)    
             # self.down_cap.set(cv.CAP_PROP_FRAME_WIDTH, 720)
             # self.down_cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)    
-            rospy.Timer(rospy.Duration(0.1), self.read_camera)
+            rospy.Timer(rospy.Duration(0.05), self.read_camera)
             
         if self.sim:
             # subscribe to image_topic from sim
@@ -129,18 +135,19 @@ class Vision:
             rospy.loginfo("Target detect activated")
 
         else:
-            rospy.loginfo("Target detect deactivated")
-            self.img_sub.unregister()
             self.target = False
+            rospy.loginfo("Target detect deactivated")
+            # self.img_sub.unregister()
         
         return ActivateResponse(True)
     
     def read_camera(self, msg):
         _, self.down_img = self.down_cap.read()
-        self.down_img = cv.rotate(self.down_img, cv.ROTATE_180)
+        # self.down_img = cv.rotate(self.down_img, cv.ROTATE_180)
         
-        msg = self.bridge.cv2_to_compressed_imgmsg(self.down_img,dst_format="jpg")
-        self.down_pub.publish(msg)
+        # NYALAKAN CAMERA TANPA COMVIS
+        # msg = self.bridge.cv2_to_compressed_imgmsg(cv.resize(self.down_img,(120,120)),dst_format="jpg")
+        # self.down_pub.publish(msg)
 
 
     def callback_img(self, msg):
@@ -152,7 +159,8 @@ class Vision:
         try:
             # Convert your ROS Image message to OpenCV2
             img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-            self.down_img = cv.rotate(img, cv.ROTATE_180)
+            # JIKA MENGGUNAKAN KAMERA KABEL PANJANG
+            # self.down_img = cv.rotate(img, cv.ROTATE_180)
 
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
@@ -194,8 +202,16 @@ class Vision:
         elif self.which_target == 2:
             mask = cv.inRange(hsv, self.target2_lower_hsv, self.target2_upper_hsv)
             rospy.logdebug(f"mask value {mask}")
-
-
+        #////// OUTDOOR //////
+        #Blok Merah
+        elif self.which_target == 3:
+            mask = cv.inRange(hsv, self.target3_lower_hsv, self.target3_upper_hsv)
+            rospy.logdebug(f"mask value {mask}")
+        #Lingkaran Abu-abu
+        elif self.which_target == 4:
+            mask = cv.inRange(hsv, self.target3_lower_hsv, self.target3_upper_hsv)
+            rospy.logdebug(f"mask value {mask}")
+            
         # FILTER
         # morph size for the filter
         MORPH_SIZE = 3
@@ -236,7 +252,7 @@ class Vision:
                     "NO TARGET",
                     (10, 100),
                     cv.FONT_HERSHEY_DUPLEX,
-                    2,
+                    3,
                     (255, 255, 255),
                     1,
                 )
@@ -245,14 +261,14 @@ class Vision:
                     "DETECTED",
                     (10, 200),
                     cv.FONT_HERSHEY_DUPLEX,
-                    2,
+                    3,
                     (255, 255, 255),
                     1,
                 )
             fps = 1/ ( rospy.Time.now()-self.last_time).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
+            msg = self.bridge.cv2_to_compressed_imgmsg(cv.resize(img_copy,(120,120)),dst_format="jpg")
             self.target_img_pub.publish(msg)
             return
         for i, contour in enumerate(contours):
@@ -262,6 +278,8 @@ class Vision:
             x, y, w, h = rect
             dx = int(w / 2 + x - FWcenter)
             dy = int((h / 2 + y - FHcenter)* -1)
+            if self.which_target == 1: 
+                dy += 80
             data.append((area,
                             rect,
                             dx,
@@ -288,7 +306,7 @@ class Vision:
             fps = 1/(rospy.Time.now()-self.last_time ).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (   0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
+            msg = self.bridge.cv2_to_compressed_imgmsg(cv.resize(img_copy,(120,120)),dst_format="jpg")
             self.target_img_pub.publish(msg)
             return
         
@@ -307,7 +325,7 @@ class Vision:
             fps = 1/(rospy.Time.now()-self.last_time ).to_sec()
             self.last_time = rospy.Time.now()
             cv.putText(img_copy, f"{round(fps,2)}", (   0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
-            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
+            msg = self.bridge.cv2_to_compressed_imgmsg(cv.resize(img_copy,(120,120)),dst_format="jpg")
             self.target_img_pub.publish(msg)
             return
 
@@ -317,7 +335,7 @@ class Vision:
         stdy = np.std(data["dy"])
         
         if len(data) > 1 or stdx != 0 or stdy != 0:
-            thr = 1.2
+            thr = 1.2 
             validx = []
             validy = []
             print("avgx\t: ", avgx)
@@ -393,6 +411,13 @@ class Vision:
         cv.line(
             img_copy,
             (0, FHcenter),
+            (int(FWcenter), FHcenter),
+            (0, 0, 255),
+            2
+        )
+        cv.line(
+            img_copy,
+            (int(FWcenter), FHcenter),
             (Fwidth, FHcenter),
             (0, 255, 0),
             2
@@ -400,6 +425,13 @@ class Vision:
         cv.line(
             img_copy,
             (FWcenter, 0),
+            (FWcenter, FHcenter),
+            (0, 0, 255),
+            2
+        )
+        cv.line(
+            img_copy,
+            (FWcenter, FHcenter),
             (FWcenter, Fheight),
             (0, 255, 0),
             2
@@ -409,7 +441,7 @@ class Vision:
         cv.putText(img_copy, f"{round(fps,2)}", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
         try:
             # Convert opencv2 img to ros Image
-            msg = self.bridge.cv2_to_compressed_imgmsg(img_copy,dst_format="jpg")
+            msg = self.bridge.cv2_to_compressed_imgmsg(cv.resize(img_copy,(120,120)),dst_format="jpg")
         except CvBridgeError as e:
             print(Warning("Conversion failed: {}".format(e)))
         self.target_img_pub.publish(msg)
@@ -434,7 +466,7 @@ class Vision:
 
     def main(self):
         last = rospy.Time.now()
-        r = rospy.Rate(10)
+        r = rospy.Rate(20)
         while not rospy.is_shutdown():
             rospy.loginfo_throttle(1,"Vision Node Heartbeat")
             if self.target:

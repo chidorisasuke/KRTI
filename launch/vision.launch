@@ -6,34 +6,22 @@
             use_sim: false 
             verbose: true
             camera_index: 0
-            <!-- PAYLOAD KANTIN -->
-            <!-- target_lower_hsv: [1,47, 134]
-            target_upper_hsv: [13, 196, 249] -->
-            <!-- PAYLOAD PAGI -->
-            <!-- target_lower_hsv: [134,43, 76]
-            target_upper_hsv: [188, 226, 255] -->
-            <!-- PAYLOAD SIANG -->
-            <!-- target_lower_hsv: [126, 75, 59] -->
-            <!-- target_upper_hsv: [180, 221, 255] -->
-            <!-- PAYLOAD LAP KANTIN -->
-            <!-- target_lower_hsv: [0, 145, 69]
-            target_upper_hsv: [206, 254, 254] -->
-            <!-- PAYLOAD LAP KANTIN SENTER HP -->
-            <!-- target_lower_hsv: [0, 19, 56]
-            target_upper_hsv: [20, 250, 255] -->
 
-            <!-- PAYLOAD ACC MALAM -->
-            target_lower_hsv: [1, 120, 65]
-            target_upper_hsv: [183, 230, 255]
-            <!-- EMBER KANTIN -->
-            target2_lower_hsv: [162, 68, 81]
-            target2_upper_hsv: [181, 255, 252]
-            <!-- EMBER PAGI -->
-            <!-- target_lower_hsv: [158,125, 102]
-            target_upper_hsv: [176, 255, 255] -->
-            <!-- EMBER SIANG -->
-            <!-- target_lower_hsv: [0, 235, 65]
-            target_upper_hsv: [179, 255, 255] -->
+            <!-- PAYLOAD LANUD -->
+            target_lower_hsv: [7, 52, 94]
+            target_upper_hsv: [17, 196, 255]
+
+            <!-- EMBER LANUD-->
+            target2_lower_hsv: [0, 195, 72]
+            target2_upper_hsv: [183, 255, 170]
+
+            <!-- RED BLOCK PLATE -->
+            target3_lower_hsv: [17, 66,107]
+            target3_upper_hsv: [59, 122,207]
+            
+            <!-- GREY PLATE -->
+            target4_lower_hsv: [17, 66,107]
+            target4_upper_hsv: [59, 122,207]
             front_fov_x: 78
             front_fov_y: 78
             down_fov_x: 78
