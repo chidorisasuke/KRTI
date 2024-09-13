@@ -849,6 +849,7 @@ class DroneAPI:
         request.param1 = type
         request.param2 = speed
         request.param3 = throttle
+        client(request) 
 
         return self.send_mavlink_command(request)
 

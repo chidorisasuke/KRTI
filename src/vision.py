@@ -73,6 +73,9 @@ class Vision:
         
         self.target3_lower_hsv = np.array(rospy.get_param("/vision/target3_lower_hsv"))
         self.target3_upper_hsv = np.array(rospy.get_param("/vision/target3_upper_hsv"))
+        
+        self.target4_lower_hsv = np.array(rospy.get_param("/vision/target4_lower_hsv"))
+        self.target4_upper_hsv = np.array(rospy.get_param("/vision/target4_upper_hsv"))
 
         self.sim = rospy.get_param("/vision/use_sim")
         self.sim_camera_topic = "/camera/down/image_raw"
@@ -199,8 +202,15 @@ class Vision:
         elif self.which_target == 2:
             mask = cv.inRange(hsv, self.target2_lower_hsv, self.target2_upper_hsv)
             rospy.logdebug(f"mask value {mask}")
+        #////// OUTDOOR //////
+        #Blok Merah
         elif self.which_target == 3:
             mask = cv.inRange(hsv, self.target3_lower_hsv, self.target3_upper_hsv)
+            rospy.logdebug(f"mask value {mask}")
+        #Lingkaran Abu-abu
+        elif self.which_target == 4:
+            mask = cv.inRange(hsv, self.target3_lower_hsv, self.target3_upper_hsv)
+            rospy.logdebug(f"mask value {mask}")
             
         # FILTER
         # morph size for the filter
@@ -268,7 +278,7 @@ class Vision:
             x, y, w, h = rect
             dx = int(w / 2 + x - FWcenter)
             dy = int((h / 2 + y - FHcenter)* -1)
-            if self.which_target == 1:
+            if self.which_target == 1: 
                 dy += 80
             data.append((area,
                             rect,
