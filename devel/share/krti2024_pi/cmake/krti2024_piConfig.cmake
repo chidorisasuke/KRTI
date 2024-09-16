@@ -1,0 +1,1 @@
+/home/krti2024_pi/devel/.private/krti2024_pi/share/krti2024_pi/cmake/krti2024_piConfig.cmake

@@ -1,0 +1,8 @@
+prefix=/home/krti2024_pi/devel/.private/krti2024_pi
+
+Name: krti2024_pi
+Description: Description of krti2024_pi
+Version: 0.0.1
+Cflags: -I/home/krti2024_pi/devel/.private/krti2024_pi/include
+Libs: -L${prefix}/lib 
+Requires: 

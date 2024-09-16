@@ -1,0 +1,1 @@
+/home/krti2024_pi/devel/.private/fusion_localization/lib/pkgconfig/fusion_localization.pc

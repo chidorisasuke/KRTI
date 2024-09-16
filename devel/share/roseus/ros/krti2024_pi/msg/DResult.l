@@ -1,0 +1,1 @@
+/home/krti2024_pi/devel/.private/krti2024_pi/share/roseus/ros/krti2024_pi/msg/DResult.l

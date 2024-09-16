@@ -1,0 +1,12 @@
+Symlinking /home/krti2024_pi/devel/./setup.bash
+Symlinking /home/krti2024_pi/devel/./setup.zsh
+Symlinking /home/krti2024_pi/devel/./setup.sh
+Symlinking /home/krti2024_pi/devel/./cmake.lock
+Symlinking /home/krti2024_pi/devel/./local_setup.bash
+Symlinking /home/krti2024_pi/devel/./local_setup.sh
+Symlinking /home/krti2024_pi/devel/./local_setup.zsh
+Symlinking /home/krti2024_pi/devel/./env.sh
+Symlinking /home/krti2024_pi/devel/./_setup_util.py
+Symlinking /home/krti2024_pi/devel/lib/pkgconfig/catkin_tools_prebuild.pc
+Symlinking /home/krti2024_pi/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake
+Symlinking /home/krti2024_pi/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake
