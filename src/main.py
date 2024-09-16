@@ -3761,16 +3761,18 @@ class Game:
         
     def test_ultrasonik(self):
         rospy.wait_for_message("/us", Float32)
-        start = rospy.Time().now().to_sec()
-        while rospy.Time().now().to_sec() -start < rospy.Duration(8).to_sec():
-            while self.us_data < 50 or self.us_data > 120:
-                rospy.loginfo("Di luar rentang ultrasonik")
-                rospy.logdebug("Di luar rentang ultrasonik")
-            
-        rospy.loginfo("DRONE DEKAT DENGAN TEMBOKKKKKK")
-        rospy.logdebug("DRONE DEKAT DENGAN TEMBOKKKKKK")
+        # start = rospy.Time().now().to_sec()
+        # while rospy.Time().now().to_sec() -start < rospy.Duration(8).to_sec():
+        # while self.us_data > 70:
+        #     rospy.loginfo("Di luar rentang ultrasonik")
+            # rospy.logdebug("Di luar rentang ultrasonik")
+        if self.us_data < 75:
+            rospy.loginfo("DRONE DEKAT DENGAN TEMBOKKKKKK")
+        else:
+            rospy.loginfo("DRONE JAUH DENGAN TEMBOK")  
+        # rospy.logdebug_throttle("DRONE DEKAT DENGAN TEMBOKKKKKK")
         
-        rospy.spin()
+        # rospy.spin()
         
 
     def test_misi_indor(self):
