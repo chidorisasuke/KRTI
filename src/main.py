@@ -3761,10 +3761,14 @@ class Game:
         
     def test_ultrasonik(self):
         rospy.wait_for_message("/us", Float32)
-        while self.us_data > 120 or self.us_data < 50:
-            rospy.loginfo("Di luar rentang ultrasonik")
+        start = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() -start < rospy.Duration(8).to_sec():
+            while self.us_data < 50 or self.us_data > 120:
+                rospy.loginfo("Di luar rentang ultrasonik")
+                rospy.logdebug("Di luar rentang ultrasonik")
             
         rospy.loginfo("DRONE DEKAT DENGAN TEMBOKKKKKK")
+        rospy.logdebug("DRONE DEKAT DENGAN TEMBOKKKKKK")
         
         rospy.spin()
         
