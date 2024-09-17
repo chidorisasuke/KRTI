@@ -1,0 +1,8 @@
+prefix=/home/krti2024_pi/devel/.private/hector_marker_drawing
+
+Name: hector_marker_drawing
+Description: Description of hector_marker_drawing
+Version: 0.5.2
+Cflags: -I/home/krti2024_pi/src/RPLidar/hector_slam/hector_marker_drawing/include -I/usr/include/eigen3
+Libs: -L${prefix}/lib 
+Requires: roscpp visualization_msgs

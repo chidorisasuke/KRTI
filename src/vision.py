@@ -76,6 +76,12 @@ class Vision:
         
         self.target4_lower_hsv = np.array(rospy.get_param("/vision/target4_lower_hsv"))
         self.target4_upper_hsv = np.array(rospy.get_param("/vision/target4_upper_hsv"))
+        
+        self.target5_lower_hsv = np.array(rospy.get_param("/vision/target5_lower_hsv"))
+        self.target5_upper_hsv = np.array(rospy.get_param("/vision/target5_upper_hsv"))
+        
+        self.target6_lower_hsv = np.array(rospy.get_param("/vision/target6_lower_hsv"))
+        self.target6_upper_hsv = np.array(rospy.get_param("/vision/target6_upper_hsv"))
 
         self.sim = rospy.get_param("/vision/use_sim")
         self.sim_camera_topic = "/camera/down/image_raw"
@@ -211,6 +217,14 @@ class Vision:
         elif self.which_target == 4:
             mask = cv.inRange(hsv, self.target3_lower_hsv, self.target3_upper_hsv)
             rospy.logdebug(f"mask value {mask}")
+        #Ember geser
+        elif self.which_target == 5:
+            mask = cv.inRange(hsv, self.target5_lower_hsv, self.target5_upper_hsv)
+            rospy.logdebug(f"mask value {mask}")
+        #LANDING
+        elif self.which_target == 6:
+            mask = cv.inRange(hsv, self.target6_lower_hsv, self.target6_upper_hsv)
+            rospy.logdebug(f"mask value {mask}")
             
         # FILTER
         # morph size for the filter
@@ -278,8 +292,14 @@ class Vision:
             x, y, w, h = rect
             dx = int(w / 2 + x - FWcenter)
             dy = int((h / 2 + y - FHcenter)* -1)
-            if self.which_target == 1: 
-                dy += 80
+            #WHEN BELOK KIRI
+            if self.which_target == 1:
+                dy -= 20
+            # if self.which_target == 5: 
+                # dx += 120
+            #WHEN BELOK KANAN
+            elif self.which_target == 5: 
+                dx -= 120
             data.append((area,
                             rect,
                             dx,

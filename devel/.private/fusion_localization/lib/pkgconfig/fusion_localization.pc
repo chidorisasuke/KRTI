@@ -1,0 +1,8 @@
+prefix=/home/krti2024_pi/devel/.private/fusion_localization
+
+Name: fusion_localization
+Description: Description of fusion_localization
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

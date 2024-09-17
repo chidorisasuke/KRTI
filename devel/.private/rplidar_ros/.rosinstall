@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/krti2024_pi/devel/.private/rplidar_ros/setup.sh

@@ -5,6 +5,6 @@
         <!-- <rosparam>
         </rosparam> -->
     </node>
-    <!-- <node name="us_publisher" pkg="rosserial_python" type="serial_node.py"/> -->
+    <node name="us_publisher" pkg="rosserial_python" type="serial_node.py"/>
 
 </launch>

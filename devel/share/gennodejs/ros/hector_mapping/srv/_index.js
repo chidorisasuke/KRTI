@@ -1,0 +1,1 @@
+/home/krti2024_pi/devel/.private/hector_mapping/share/gennodejs/ros/hector_mapping/srv/_index.js

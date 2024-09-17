@@ -1,0 +1,1 @@
+/home/krti2024_pi/devel/.private/hector_mapping/lib/python3/dist-packages/hector_mapping/srv/_ResetMapping.py

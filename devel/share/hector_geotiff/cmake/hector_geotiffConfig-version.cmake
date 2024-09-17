@@ -1,0 +1,1 @@
+/home/krti2024_pi/devel/.private/hector_geotiff/share/hector_geotiff/cmake/hector_geotiffConfig-version.cmake

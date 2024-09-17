@@ -1,0 +1,8 @@
+prefix=/home/krti2024_pi/devel/.private/hector_map_tools
+
+Name: hector_map_tools
+Description: Description of hector_map_tools
+Version: 0.5.2
+Cflags: -I/home/krti2024_pi/src/RPLidar/hector_slam/hector_map_tools/include -I/usr/include/eigen3
+Libs: -L${prefix}/lib 
+Requires: nav_msgs
