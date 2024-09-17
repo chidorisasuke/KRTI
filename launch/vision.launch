@@ -11,8 +11,8 @@
             <!-- target_lower_hsv: [7, 52, 94] -->
             <!-- target_upper_hsv: [17, 196, 255] -->
             <!-- PAYLOAD LANUD -->
-            target1_lower_hsv: [3, 0, 235]
-            target1_upper_hsv: [69, 116, 255]
+            target_lower_hsv: [3, 0, 235]
+            target_upper_hsv: [69, 116, 255]
 
             <!-- EMBER LANUD-->
             <!-- target2_lower_hsv: [0, 195, 72] -->

@@ -3508,6 +3508,145 @@ class Game:
         pose.pose.position.altitude = point.altitude
         return pose
 
+    def outdoor_kanan(self):
+        '''
+            Checklist:
+            1. Check fungsi mengecek sudah sampai tujuan Lat Long?
+            2. Vision berjalan baik, Detec 3 dulu baru 4?
+            3. Apakah set_speed bisa mengubah kecepatan?
+        
+        '''
+
+        self.drone.wait4start()
+        # Destination
+        self.drone.set_home()
+        home_heading = self.drone.compass
+
+        head = radians(home_heading)
+        print("compass heading: ",home_heading)
+        print("imu heading: ",self.drone.imu_heading)
+        print("cur heading: ",self.drone.current_heading)
+
+        # 0. Relay as ON
+        # self.drone.switch_relay(0, False)
+
+#        # 1. Set source to optical flow
+        rospy.loginfo(f"Changing source to GPS")
+        self.drone.set_ekf_source(2)
+
+        gps = self.drone.gps
+        coordinate = GeoPoint()
+        # coordinate = getFinalLatLong(gps.latitude,gps.longitude,5,home_heading)
+        coordinate.altitude = 3
+        coordinate.latitude = -7.9152715
+        coordinate.longitude = 110.5659067
+ 
+        # 2. Takeoff
+        check = self.drone.takeoff(3)
+        if not check:
+            rospy.logerr("takeoff failed")
+            rospy.loginfo("trying again")
+        else:
+            rospy.loginfo("takeoff success")
+        rospy.sleep(2)
+        
+        rospy.loginfo("Change Speed to 3 m/s")
+        self.drone.set_speed(0, 3, -1)
+
+        rospy.loginfo("Move to first WP ")
+        # self.drone.move_global(coordinate=self.geopoint2geopose(coordinate),heading=0)
+        self.drone.move_global_raw(coordinate)
+        # BELUM DI CEK WORK ATAU NGGAK 
+        # while not self.drone.check_waypoint_reached_global(coordinate):
+        #     rospy.sleep(0.1)
+        
+        rospy.loginfo("-- CALL SERVICE --")
+        self.activate_target(ActivateRequest(True, 3))
+        
+        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        start_time = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time < rospy.Duration(6).to_sec():
+            self.test_color_following()
+            
+        self.activate_target(ActivateRequest(False, 3))
+        self.activate_target(ActivateRequest(True, 4))
+            
+        rospy.loginfo("-- SEARCH FOR DROP --")
+        start_time1 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time1 < rospy.Duration(6).to_sec():
+            self.test_color_following()
+        
+        rospy.loginfo("-- READY TO DROP --")
+        start_time2 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time2 < rospy.Duration(8).to_sec():
+            self.drop_grey()
+        
+        self.drone.set_servo(6, 900)
+        
+        self.activate_target(ActivateRequest(False, 4))
+        
+        coordinate.altitude = 3
+        coordinate.latitude = -7.9153838
+        coordinate.longitude = 110.5667751
+        
+        rospy.loginfo("-- CALL SERVICE CAM 3--")
+        self.activate_target(ActivateRequest(True, 3))
+
+        rospy.loginfo("Move to second WP ")
+        self.drone.move_global_raw(coordinate)
+        # BELUM DI CEK WORK ATAU NGGAK 
+        # rospy.loginfo("-- CHECK REACH OR NOT --")
+        # while not self.drone.check_waypoint_reached_global(coordinate):
+            # rospy.sleep(0.1)
+            
+        rospy.loginfo("-- CALL SERVICE --")
+        
+        rospy.loginfo("-- SEARCHING FOR PAYLOAD --")
+        start_time3 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time3 < rospy.Duration(6).to_sec():
+            self.test_color_following()
+            
+        self.activate_target(ActivateRequest(False, 3))
+        self.activate_target(ActivateRequest(True, 4))
+            
+        rospy.loginfo("-- SEARCH FOR DROP --")
+        start_time4 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time4 < rospy.Duration(6).to_sec():
+            self.test_color_following()
+        
+        rospy.loginfo("-- READY TO DROP --")
+        start_time5 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time5 < rospy.Duration(8).to_sec():
+            self.drop_grey()
+        
+        self.drone.set_servo(7, 2300)
+        
+        self.activate_target(ActivateRequest(False, 4))
+        
+        coordinate.altitude = 2
+        coordinate.latitude = -7.9157517
+        coordinate.longitude = 110.5663322
+        
+        self.activate_target(ActivateRequest(True, 6))
+        
+        rospy.loginfo("Move to third WP ")
+        self.drone.move_global_raw(coordinate)
+        # BELUM DI CEK WORK ATAU NGGAK 
+        # rospy.loginfo("-- CHECK REACH OR NOT --")
+        # while not self.drone.check_waypoint_reached_global(coordinate):
+            # rospy.sleep(0.1)
+            
+        rospy.loginfo("-- SEARCH FOR DROP --")
+        start_time5 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time5 < rospy.Duration(4).to_sec():
+            self.test_color_following()
+        
+        rospy.loginfo("-- READY TO DROP --")
+        start_time6 = rospy.Time().now().to_sec()
+        while rospy.Time().now().to_sec() - start_time6 < rospy.Duration(6).to_sec():
+            self.drop_grey()
+        
+        self.drone.set_mode("LAND")
 
     def outdoor(self): 
         '''
@@ -3761,23 +3900,45 @@ class Game:
         
     def test_ultrasonik(self):
         rospy.wait_for_message("/us", Float32)
-        # start = rospy.Time().now().to_sec()
-        # while rospy.Time().now().to_sec() -start < rospy.Duration(8).to_sec():
-        # while self.us_data > 70:
-        #     rospy.loginfo("Di luar rentang ultrasonik")
-            # rospy.logdebug("Di luar rentang ultrasonik")
-        if self.us_data < 75:
-            rospy.loginfo("DRONE DEKAT DENGAN TEMBOKKKKKK")
-        else:
-            rospy.loginfo("DRONE JAUH DENGAN TEMBOK")  
-        # rospy.logdebug_throttle("DRONE DEKAT DENGAN TEMBOKKKKKK")
+        # self.drone.use_gps(False)
+        self.drone.wait4start()
+        self.drone.move_vel(0,0,0)
+        now = rospy.Time.now().to_sec()
+
+        # Destination
+        home_heading = self.drone.get_home_heading()
+        head = radians(home_heading)
+
+        # 1. Set source to optical flow
+        rospy.loginfo(f"Changing source to GPS RTK")
+        self.drone.set_ekf_source(2)
+
+        # 2. Takeoff
+        self.drone.takeoff(1)
+        rospy.sleep(5)
         
-        # rospy.spin()
+        self.drone.set_servo(6, 900)
+        self.drone.set_servo(7, 2300)
+        
+        # rospy.wait_for_message("/us", Float32)
+        # # start = rospy.Time().now().to_sec()
+        # # while rospy.Time().now().to_sec() -start < rospy.Duration(8).to_sec():
+        # # while self.us_data > 70:
+        # #     rospy.loginfo("Di luar rentang ultrasonik")
+        #     # rospy.logdebug("Di luar rentang ultrasonik")
+        # if self.us_data < 75:
+        #     rospy.loginfo("DRONE DEKAT DENGAN TEMBOKKKKKK")
+        # else:
+        #     rospy.loginfo("DRONE JAUH DENGAN TEMBOK")  
+        # # rospy.logdebug_throttle("DRONE DEKAT DENGAN TEMBOKKKKKK")
+        
+        # # rospy.spin()
+        self.drone.set_mode("LAND")
         
 
-    def test_misi_indor(self):
+    def misi_indor(self):
         rospy.wait_for_message("/us", Float32)
-        self.drone.use_gps(False)
+        # self.drone.use_gps(False)
         self.drone.wait4start()
         self.drone.move_vel(0,0,0)
         now = rospy.Time.now().to_sec()
@@ -3950,38 +4111,6 @@ class Game:
         
         rospy.loginfo("Changing to AUTO")
         self.drone.set_mode("AUTO")
-    
-    # def outdoor(self):
-        
-    #     self.drone.wait4start()
-
-    #     # Destination
-    #     home_heading = self.drone.compass
-    #     # home_heading = self.drone.get_home_heading()
-    #     head = radians(home_heading)
-
-    #     print("home heading : ", home_heading)
-    #     # 0. Relay as ON
-    #     # self.drone.switch_relay(0, False)
-
-    #     # 1. Set source to optical flow
-    #     # rospy.loginfo(f"Changing source to optical flow")
-    #     self.drone.set_ekf_source(1)
-
-    #     gps = self.drone.gps
-    #     coordinate = getFinalLatLong(gps.latitude,gps.longitude,5,home_heading)
-    #     coordinate.altitude = 1.5
-    #     # 2. Takeoff
-    #     check = self.drone.takeoff(1.5)
-    #     if not check:
-    #         rospy.logerr("takeoff failed")
-    #         rospy.loginfo("trying again")
-    #     else:
-    #         rospy.loginfo("takeoff success")
-    #     rospy.sleep(5)
-
-    #     self.drone.move_global(coordinate, 0)
-    #     rospy.spin()
 
 
 if __name__ == "__main__":
@@ -4001,8 +4130,9 @@ if __name__ == "__main__":
         
         # MISI OUTDOOR
         # game.outdoor()
+        # game.outdoor_kanan()
         # MISI INDOOR
-        # game.test_misi_indor()
+        # game.misi_indor()
         
         # game.test_vision()
         # rospy.spin()
@@ -4030,3 +4160,4 @@ if __name__ == "__main__":
         pass
     finally:
         rospy.logdebug("exit")
+
