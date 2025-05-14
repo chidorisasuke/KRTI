@@ -2,7 +2,7 @@
 2. **cd /nama-workspace-kamu/**
 3. **catkin_make**
 4. **source devel/setup.bash**
-5. **cd /src/**
+5. **cd src/**
 6. **git clone https://github.com/Akasasura/krti2024_pi.git**
 7. **cd ..**
 8. coba **catkin_make** lagi
