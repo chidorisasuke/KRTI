@@ -5,7 +5,7 @@
 5. **cd src/**
 6. **git clone https://github.com/Akasasura/krti2024_pi.git**
 7. **cd ..**
-8. coba **catkin_make** lagi, sebelum itu sudo apt install catkin
+8. coba **catkin_make** lagi, sebelum itu **sudo apt install catkin**
 9. jika gagal ganti packages di file:
    a. **package.xml**
    b. main.pi bagian **krti2024_pi.msg**, dan **krti2024_pi.srv**, sesuaikan dengan nama package workspace
