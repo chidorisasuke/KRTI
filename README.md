@@ -23,4 +23,4 @@
 Cara kilat instalasi ROS
 1. Download dulu file instalasi ROS yang .sh
 2. chmod a+x tahapan_setup_ros_full.sh
-3. sudo .\tahapan_setup_ros_full.sh
+3. sudo ./tahapan_setup_ros_full.sh
