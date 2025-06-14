@@ -3,7 +3,7 @@
 3. **catkin_make**
 4. **source devel/setup.bash**
 5. **cd /src/**
-6. **git clone https://github.com/Akasasura/krti2024_pi.git**
+6. **git clone https://github.com/Akasasura/krti2024_pi.git** (Original and Private Repo)
 7. **cd ..**
 8. coba **catkin_make** lagi
 9. jika gagal ganti packages di file:
