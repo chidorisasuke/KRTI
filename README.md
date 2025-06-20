@@ -1,7 +1,7 @@
 # KRTI 2024 - Autonomous Drone System
 
 <p align="center">
-  <img src="URL_TO_YOUR_DRONE_IMAGE_OR_DEMO_GIF.png" alt="KRTI Drone" width="500"/>
+  <img src="drone design.webp" alt="KRTI Drone" width="500"/>
 </p>
 
 <p align="center">
