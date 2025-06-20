@@ -47,9 +47,9 @@ Follow these instructions to set up the project on a new machine.
 - **ROS Noetic Ninjemys** installed. If you need to install ROS, you can use a setup script:
   ```sh
   # Make the script executable
-  chmod +x your_ros_installation_script.sh
+  chmod +x tahapan_setup_ros_dekstop.sh
   # Run the script
-  sudo ./your_ros_installation_script.sh
+  sudo ./tahapan_setup_ros_dekstop.sh
   ```
 
 ### Installation
